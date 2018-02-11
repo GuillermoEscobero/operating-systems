@@ -8,7 +8,7 @@ struct person {
     uint32_t age;
     uint32_t id;
     char control;
-    float salary;
+    double salary;
 };
 
 #endif /* PERSON_H */

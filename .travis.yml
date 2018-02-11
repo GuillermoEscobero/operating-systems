@@ -4,6 +4,5 @@ language: c
       - make
 
   after_success:
-     - cd build
      - ./printFile samples/personas_1718.per
      - ./statistics samples/personas_1718.per

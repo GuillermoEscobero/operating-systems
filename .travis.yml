@@ -1,8 +1,10 @@
 language: c
 
-  script: 
-      - make
+compiler: gcc
 
-  after_success:
-     - ./printFile samples/personas_1718.per
-     - ./statistics samples/personas_1718.per
+script:
+  - make
+
+after_success:
+  - ./printFile samples/personas_1718.per
+  - ./statistics samples/personas_1718.per

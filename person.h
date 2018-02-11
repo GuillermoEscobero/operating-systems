@@ -1,6 +1,8 @@
 #ifndef PERSON_H
 #define PERSON_H
 
+#include <stdint.h>
+
 struct person {
     char name[48];
     uint32_t age;

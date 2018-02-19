@@ -8,7 +8,7 @@ int splitBinary(char *inputFile, char *youngerOutputFile, char *olderOutputFile,
 
 
 int main(int argc, char *argv[]) {
-    //TODO: handle errors
+    /* TODO: handle errors */
     return splitBinary(argv[2], argv[3], argv[4], atoi(argv[1]));
 }
 
@@ -40,17 +40,18 @@ int splitBinary(char *inputFile, char *youngerOutputFile, char *olderOutputFile,
 
     /* This loop will repeat the number of structs contained in the binary
      * file */
-    for (int i = 0; i < fileRows; i++) {
+    int i;
+    for (i = 0; i < fileRows; i++) {
         /* This line read each struct in the file and save the value in the
          * auxiliary struct input */
 
         read(fdInput, &auxPerson, sizeof(auxPerson));
 
         if (auxPerson.age < thresholdAge) {
-            //fill the younger file
+            /* fill the younger file */
             write(fdYoungerOutput, &auxPerson, sizeof(auxPerson));
         } else {
-            //fill the older file
+            /* fill the older file */
             write(fdOlderOutput, &auxPerson, sizeof(auxPerson));
         }
     }

@@ -52,3 +52,10 @@ Mkfile.old
 dkms.conf
 .idea/
 cmake-build-debug/
+
+# Binaries of the project
+printFile
+statistics
+split
+filter
+combine

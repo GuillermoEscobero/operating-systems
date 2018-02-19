@@ -1,0 +1,10 @@
+language: c
+
+compiler: gcc
+
+script:
+  - make
+
+after_success:
+  - ./printFile samples/personas_1718.per
+  - ./statistics samples/personas_1718.per

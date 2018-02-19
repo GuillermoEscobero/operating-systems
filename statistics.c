@@ -18,7 +18,7 @@ int main(int argc, char *argv[]){
 int calculateStatistics(char* inputFile) {
 	
     /* Declaration of auxiliary person struct */
-    struct person input;
+    Person input;
 
     /* We get the file descriptor of the input file */
     int inputFileDesc = open(inputFile, O_RDONLY);
@@ -32,36 +32,61 @@ int calculateStatistics(char* inputFile) {
     stat(inputFile, &st);
     long binSize = st.st_size;
 
-    /* We sum the size of each field separately to avoid padding symbols for 
-     * align purposes */
-    long fileRows = binSize/(sizeof(input.name) + sizeof(input.age) + 
-            sizeof(input.id) + sizeof(input.control) + sizeof(input.salary));
+    /* We calculate the number of entries that the binary file has */ 
+    long fileRows = binSize/sizeof(Person);
 
     /* Looks for the first location of the input file in memory */
     lseek(inputFileDesc, 0, SEEK_SET);
 
     int i;
+
+    /* Declaration of variables that will store the raw data for calculating
+     * the stats */
     double totalSalary = 0.0;
-    int totalAge = 0;
+    unsigned int totalAge = 0;
+
+    /* We create arrays of 255 (ascii) to store the frequency of ID char and
+     * the total age of the people with that ID char */
+    unsigned int arrayChar[255] = {0};
+    unsigned int arrayAge[255] = {0};
 
     /* This loop will repeat the number of structs contained in the binary
      * file */
     for(i = 0; i < fileRows; i++) {
-        /* These lines read each field of the current struct in the file
-         * and save the value in the struct input */
-        read(inputFileDesc, &input.name, sizeof(input.name));
-        read(inputFileDesc, &input.age, sizeof(input.age));
-        read(inputFileDesc, &input.id, sizeof(input.id));
-        read(inputFileDesc, &input.control, sizeof(input.control));
-        read(inputFileDesc, &input.salary, sizeof(input.salary));
+        /* This line reads each struct in the file and save the value in the
+         * auxiliary struct input */
+        read(inputFileDesc, &input, sizeof(Person));
 
         totalSalary += input.salary;
         totalAge += input.age;
+
+        /* We increment the frequency of the ID control char */
+        ++arrayChar[(int)input.id_ctrl];
+        arrayAge[(int)input.id_ctrl] += input.age;
     }
 
+    /* We calculate the most frequent ID control character, saving the ascii
+     * code in index variable */
+    int max = arrayChar[0];
+    int index = 0;
+
+    for(i = 0; i < 255; i++) {
+        if(arrayChar[i] > max) {
+            max = arrayChar[i];
+            index = i;
+        }
+    }
+
+    /* We print the output required */
     printf("Average salary: %.0f\n", totalSalary/fileRows);
     printf("Average age: %ld\n", totalAge/fileRows);
-    
+    printf("Most frequent ID control character: %c\n", (char)index);
+    /* To calculate the avg age for the most frequent ID control char, we get
+     * the total age of people with that ID control, and divide by the
+     * frequency of that ID control char */
+    printf("Average age for the Most frequent ID control character: %d\n",
+            arrayAge[index]/arrayChar[index]);
+
     /* Close input file */
     close(inputFileDesc);
 

@@ -55,9 +55,6 @@ int filter(char id_ctrl, char* inputFile, char* outputFile) {
         
         if(input.id_ctrl == id_ctrl) {
             write(outputFileDesc, &input, sizeof(Person));
-            /* Prints in std output the current entry of the binary file */
-            printf("%s\t%d\t%.8u\t%c\t%.0f\n", input.name, input.age, input.id,
-                    input.id_ctrl, input.salary);
         }
     }
 

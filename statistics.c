@@ -11,12 +11,12 @@ int main(int argc, char *argv[]){
     if(argc != 2) {
         return 1;
     }
-    
+
 	return calculateStatistics(argv[1]);
 }
 
 int calculateStatistics(char* inputFile) {
-	
+
     /* Declaration of auxiliary person struct */
     Person input;
 
@@ -32,11 +32,8 @@ int calculateStatistics(char* inputFile) {
     stat(inputFile, &st);
     long binSize = st.st_size;
 
-    /* We calculate the number of entries that the binary file has */ 
+    /* We calculate the number of entries that the binary file has */
     long fileRows = binSize/sizeof(Person);
-
-    /* Looks for the first location of the input file in memory */
-    lseek(inputFileDesc, 0, SEEK_SET);
 
     int i;
 
@@ -45,10 +42,10 @@ int calculateStatistics(char* inputFile) {
     double totalSalary = 0.0;
     unsigned int totalAge = 0;
 
-    /* We create arrays of 255 (ascii) to store the frequency of ID char and
-     * the total age of the people with that ID char */
-    unsigned int arrayChar[255] = {0};
-    unsigned int arrayAge[255] = {0};
+    /* We create arrays of 128 (printable ascii code) to store the frequency of
+     * ID char and the total age of the people with that ID char */
+    unsigned int arrayChar[128] = {0};
+    unsigned int arrayAge[128] = {0};
 
     /* This loop will repeat the number of structs contained in the binary
      * file */
@@ -61,7 +58,8 @@ int calculateStatistics(char* inputFile) {
         totalAge += input.age;
 
         /* We increment the frequency of the ID control char */
-        ++arrayChar[(int)input.id_ctrl];
+        arrayChar[(int)input.id_ctrl] += 1;
+        /* We add the current age to the total age of this ID control char */
         arrayAge[(int)input.id_ctrl] += input.age;
     }
 

@@ -34,16 +34,13 @@ int filter(char id_ctrl, char* inputFile, char* outputFile) {
     /* We calculate the number of entries that the binary file has */
     long fileRows = binSize/sizeof(Person);
 
-    /* Looks for the first location of the input file in memory */
-    lseek(inputFileDesc, 0, SEEK_SET);
-
+    /* Create output file, with permissions 664 */
     int outputFileDesc = creat(outputFile, 0664);
 
+    /* Check if an error ocurred when creating file */
     if(outputFileDesc < 0)
         return 1;
 
-    lseek(outputFileDesc, 0, SEEK_SET);
-    
     int i;
 
     /* This loop will repeat the number of structs contained in the binary
@@ -52,7 +49,7 @@ int filter(char id_ctrl, char* inputFile, char* outputFile) {
         /* This line read each struct in the file and save the value in the
          * auxiliary struct input */
         read(inputFileDesc, &input, sizeof(Person));
-        
+
         if(input.id_ctrl == id_ctrl) {
             write(outputFileDesc, &input, sizeof(Person));
         }

@@ -11,7 +11,7 @@ int main(int argc, char *argv[]){
     if(argc != 2) {
         return 1;
     }
-  
+
 	return readBinary(argv[1]);
 }
 
@@ -33,9 +33,6 @@ int readBinary(char* inputFile) {
 
     /* We calculate the number of entries that the binary file has */
     long fileRows = binSize/sizeof(Person);
-
-    /* Looks for the first location of the input file in memory */
-    lseek(inputFileDesc, 0, SEEK_SET);
 
     int i;
 

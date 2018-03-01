@@ -9,7 +9,8 @@ int readBinary(char* inputFile);
 int main(int argc, char *argv[]){
     /* Check that the arguments number is correct */
     if(argc != 2) {
-        return 1;
+        printf("Error: Wrong arguments number");
+        return -1;
     }
 
 	return readBinary(argv[1]);
@@ -23,8 +24,10 @@ int readBinary(char* inputFile) {
     int inputFileDesc = open(inputFile, O_RDONLY);
 
     /* Check if an error ocurred when opening file */
-    if(inputFileDesc < 0)
-        return 1;
+    if(inputFileDesc < 0) {
+        perror("Error");
+        return -1;
+    }
 
     /* We use stat system call to get the size of the binary file */
     struct stat st;

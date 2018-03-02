@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.8)
 project(operating_systems)
 
 set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_FLAGS "-Wall -ansi -o")
-
+#set(CMAKE_C_FLAGS "${CMAKE_CFLAGS} -Wall -ansi -o")
+set(CMAKE_BUILD_TYPE DEBUG)
 
 include_directories(person.h)
 

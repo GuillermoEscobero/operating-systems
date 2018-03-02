@@ -25,7 +25,7 @@ int readBinary(char* inputFile) {
 
     /* Check if an error ocurred when opening file */
     if(inputFileDesc < 0) {
-        perror("Error");
+        perror("Error: No such file or directory");
         return -1;
     }
 

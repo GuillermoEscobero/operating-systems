@@ -25,7 +25,7 @@ int filter(char id_ctrl, char* inputFile, char* outputFile) {
 
     /* Check if an error ocurred when opening file */
     if(inputFileDesc < 0) {
-      perror("Error");
+      perror("Error: No such file or directory");
       return -1;
     }
 
@@ -42,7 +42,7 @@ int filter(char id_ctrl, char* inputFile, char* outputFile) {
 
     /* Check if an error ocurred when creating file */
     if(outputFileDesc < 0) {
-      perror("Error");
+      perror("Error: No such file or directory");
       return -1;
     }
 

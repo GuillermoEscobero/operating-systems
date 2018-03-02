@@ -26,7 +26,7 @@ int calculateStatistics(char* inputFile) {
 
     /* Check if an error ocurred when opening file */
     if(inputFileDesc < 0) {
-      perror("Error");
+      perror("Error: No such file or directory");
       return -1;
     }
 
@@ -50,10 +50,10 @@ int calculateStatistics(char* inputFile) {
     double totalSalary = 0.0;
     unsigned int totalAge = 0;
 
-    /* We create arrays of 128 (printable ascii code) to store the frequency of
+    /* We create arrays of 255 (ascii code) to store the frequency of
      * ID char and the total age of the people with that ID char */
-    unsigned int arrayChar[128] = {0};
-    unsigned int arrayAge[128] = {0};
+    unsigned int arrayChar[255] = {0};
+    unsigned int arrayAge[255] = {0};
 
     /* This loop will repeat the number of structs contained in the binary
      * file */

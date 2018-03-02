@@ -26,7 +26,7 @@ int combine(char* inputFile1, char* inputFile2, char* outputFile) {
 
     /* Check if an error ocurred when opening file */
     if(inputFileDesc1 < 0 || inputFileDesc2 < 0) {
-      perror("Error");
+      perror("Error: No such file or directory\n");
       return -1;
     }
 
@@ -60,10 +60,10 @@ int combine(char* inputFile1, char* inputFile2, char* outputFile) {
 
     /* Check if an error ocurred when creating file */
     if(outputFileDesc < 0) {
-      perror("Error");
+      perror("Error: No such file or directory");
       return -1;
     }
-
+printf("bum\n");
     /* File descriptor to the beginning of output file */
     if(!lseek(outputFileDesc, 0, SEEK_SET)) {
       perror("Error");

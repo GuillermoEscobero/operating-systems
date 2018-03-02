@@ -45,12 +45,12 @@ int combine(char* inputFile1, char* inputFile2, char* outputFile) {
 
     /* Looks for the end location of the input files in memory, and with an
      * offset to put the descriptor in the beginning of the last struct */
-    if(!lseek(inputFileDesc1, -sizeof(Person), SEEK_END)) {
+    if(lseek(inputFileDesc1, -sizeof(Person), SEEK_END) == -1) {
       perror("Error");
       return -1;
     }
 
-    if(!lseek(inputFileDesc2, -sizeof(Person), SEEK_END)) {
+    if(lseek(inputFileDesc2, -sizeof(Person), SEEK_END) == -1) {
       perror("Error");
       return -1;
     }
@@ -63,9 +63,9 @@ int combine(char* inputFile1, char* inputFile2, char* outputFile) {
       perror("Error: No such file or directory");
       return -1;
     }
-printf("bum\n");
+
     /* File descriptor to the beginning of output file */
-    if(!lseek(outputFileDesc, 0, SEEK_SET)) {
+    if(lseek(outputFileDesc, 0, SEEK_SET) == -1) {
       perror("Error");
       return -1;
     }
@@ -89,53 +89,57 @@ printf("bum\n");
     for(i = 0; i < minRows; i++) {
         /* This line read each struct in the file and save the value in the
          * auxiliary struct input */
-        if(!read(inputFileDesc1, &input1, sizeof(Person))) {
-          perror("Error");
+        if(read(inputFileDesc1, &input1, sizeof(Person)) == -1) {
+          perror("ErrorR1");
           return -1;
         }
-        if(!read(inputFileDesc2, &input2, sizeof(Person))) {
-          perror("Error");
+        if(read(inputFileDesc2, &input2, sizeof(Person)) == -1) {
+          perror("ErrorR2");
           return -1;
         }
 
         /* The descriptor is moved two spaces of Person struct, because
-         * read syscall has moved the descriptor forward one struct */
-        if(!lseek(inputFileDesc1, -2*sizeof(Person), SEEK_CUR)) {
-          perror("Error");
-          return -1;
-        }
+         * read syscall has moved the descriptor forward one struct, except on
+         * the last iteration, as it will be go out of bounds */
+        if (i != minRows-1) {
+          if(lseek(inputFileDesc1, -2*sizeof(Person), SEEK_CUR) == -1) {
+            perror("ErrorL1");
+            return -1;
+          }
 
-        if(!lseek(inputFileDesc2, -2*sizeof(Person), SEEK_CUR)) {
-          perror("Error");
-          return -1;
+          if(lseek(inputFileDesc2, -2*sizeof(Person), SEEK_CUR) == -1) {
+            perror("ErrorL2");
+            return -1;
+          }
         }
 
         /* The structs are written to the output file */
-        if(!write(outputFileDesc, &input1, sizeof(Person))) {
-          perror("Error");
+        if(write(outputFileDesc, &input1, sizeof(Person)) == -1) {
+          perror("ErrorW1");
           return -1;
         }
 
-        if(!write(outputFileDesc, &input2, sizeof(Person))) {
-          perror("Error");
+        if(write(outputFileDesc, &input2, sizeof(Person)) == -1) {
+          perror("ErrorW2");
           return -1;
         }
     }
 
+
     /* This loop will write the structs that lasts in the big binary file */
     for(i = 0; i < (maxRows-minRows); i++) {
-        if(!read(bigDesc, &input1, sizeof(Person))) {
-          perror("Error");
+        if(read(bigDesc, &input1, sizeof(Person)) == -1) {
+          perror("ErrorR3");
           return -1;
         }
 
-        if(!lseek(bigDesc, -2*sizeof(Person), SEEK_CUR)) {
-          perror("Error");
+        if(lseek(bigDesc, -2*sizeof(Person), SEEK_CUR) == -1) {
+          perror("ErrorL3");
           return -1;
         }
 
-        if(!write(outputFileDesc, &input1, sizeof(Person))) {
-          perror("Error");
+        if(write(outputFileDesc, &input1, sizeof(Person)) == -1) {
+          perror("ErrorW3");
           return -1;
         }
     }

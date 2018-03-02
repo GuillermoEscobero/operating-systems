@@ -68,8 +68,6 @@ int splitBinary(char *inputFile, char *youngerOutputFile, char *olderOutputFile,
       return -1;
     }
 
-    printf("buuum\n");
-
     /* This loop will repeat the number of structs contained in the binary
      * file */
     int i;

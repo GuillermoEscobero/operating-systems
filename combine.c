@@ -45,12 +45,12 @@ int combine(char* inputFile1, char* inputFile2, char* outputFile) {
 
     /* Looks for the end location of the input files in memory, and with an
      * offset to put the descriptor in the beginning of the last struct */
-    if(lseek(inputFileDesc1, -sizeof(Person), SEEK_END)) {
+    if(!lseek(inputFileDesc1, -sizeof(Person), SEEK_END)) {
       perror("Error");
       return -1;
     }
 
-    if(lseek(inputFileDesc2, -sizeof(Person), SEEK_END)) {
+    if(!lseek(inputFileDesc2, -sizeof(Person), SEEK_END)) {
       perror("Error");
       return -1;
     }

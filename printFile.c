@@ -44,7 +44,7 @@ int readBinary(char* inputFile) {
     for(i = 0; i < fileRows; i++) {
         /* This line read each struct in the file and save the value in the
          * auxiliary struct input */
-        if(read(inputFileDesc, &input, sizeof(Person))) {
+        if(!read(inputFileDesc, &input, sizeof(Person))) {
           perror("Error");
           return -1;
         }

@@ -63,10 +63,12 @@ int splitBinary(char *inputFile, char *youngerOutputFile, char *olderOutputFile,
     }
 
     /* Looks for the first location of the input file in memory */
-    if(!lseek(fdInput, 0, SEEK_SET)) {
+    if(lseek(fdInput, 0, SEEK_SET) == -1) {
       perror("Error");
       return -1;
     }
+
+    printf("buuum\n");
 
     /* This loop will repeat the number of structs contained in the binary
      * file */
@@ -74,7 +76,7 @@ int splitBinary(char *inputFile, char *youngerOutputFile, char *olderOutputFile,
     for (i = 0; i < fileRows; i++) {
         /* We read each struct in the file and save the value in the
          * auxiliary struct input to be compared later */
-        if(!read(fdInput, &auxPerson, sizeof(auxPerson))) {
+        if(read(fdInput, &auxPerson, sizeof(auxPerson)) == -1) {
           perror("Error");
           return -1;
         }
@@ -82,13 +84,13 @@ int splitBinary(char *inputFile, char *youngerOutputFile, char *olderOutputFile,
         if (auxPerson.age < thresholdAge) {
             /* If the age of the read person is below the threshold we write
              * it in the corresponding file */
-            if(!write(fdYoungerOutput, &auxPerson, sizeof(auxPerson))) {
+            if(write(fdYoungerOutput, &auxPerson, sizeof(auxPerson)) == -1) {
               perror("Error");
               return -1;
             }
         } else {
             /* Fill the other file if the condition was not fulfilled */
-            if(!write(fdOlderOutput, &auxPerson, sizeof(auxPerson))) {
+            if(write(fdOlderOutput, &auxPerson, sizeof(auxPerson)) == -1) {
               perror("Error");
               return -1;
             }

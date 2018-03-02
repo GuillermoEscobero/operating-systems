@@ -17,10 +17,10 @@ int splitBinary(char *inputFile, char *youngerOutputFile, char *olderOutputFile,
     Person auxPerson;
 
     /* We get the file descriptor of the input file */
-    int fdInput = openat(AT_FDCWD, inputFile, O_RDONLY);
-    int fdYoungerOutput = openat(AT_FDCWD, youngerOutputFile, O_CREAT | O_APPEND | O_WRONLY,
-                                 S_IRWXU + S_IRWXG + S_IRWXO);
-    int fdOlderOutput = openat(AT_FDCWD, olderOutputFile, O_CREAT | O_APPEND | O_WRONLY, S_IRWXU + S_IRWXG + S_IRWXO);
+    int fdInput = open(inputFile, O_RDONLY);
+    int fdYoungerOutput = open(youngerOutputFile, O_CREAT | O_APPEND | O_WRONLY,
+                               S_IRWXU + S_IRWXG + S_IRWXO);
+    int fdOlderOutput = open(olderOutputFile, O_CREAT | O_APPEND | O_WRONLY, S_IRWXU + S_IRWXG + S_IRWXO);
 
     /* Check if an error ocurred when opening file */
     if (fdInput < 0 || fdYoungerOutput < 0 || fdOlderOutput < 0) {

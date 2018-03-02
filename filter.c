@@ -9,7 +9,8 @@ int filter(char id_ctrl, char* inputFile, char* outputFile);
 int main(int argc, char *argv[]){
     /* Check that the arguments number is correct */
     if(argc != 4) {
-        return 1;
+        printf("Error: Wrong arguments number\n");
+        return -1;
     }
 
 	return filter(argv[1][0], argv[2], argv[3]);
@@ -23,8 +24,10 @@ int filter(char id_ctrl, char* inputFile, char* outputFile) {
     int inputFileDesc = open(inputFile, O_RDONLY);
 
     /* Check if an error ocurred when opening file */
-    if(inputFileDesc < 0)
-        return 1;
+    if(inputFileDesc < 0) {
+      perror("Error");
+      return -1;
+    }
 
     /* We use stat system call to get the size of the binary file */
     struct stat st;
@@ -38,8 +41,10 @@ int filter(char id_ctrl, char* inputFile, char* outputFile) {
     int outputFileDesc = creat(outputFile, 0664);
 
     /* Check if an error ocurred when creating file */
-    if(outputFileDesc < 0)
-        return 1;
+    if(outputFileDesc < 0) {
+      perror("Error");
+      return -1;
+    }
 
     int i;
 
@@ -48,10 +53,16 @@ int filter(char id_ctrl, char* inputFile, char* outputFile) {
     for(i = 0; i < fileRows; i++) {
         /* This line read each struct in the file and save the value in the
          * auxiliary struct input */
-        read(inputFileDesc, &input, sizeof(Person));
+        if(!read(inputFileDesc, &input, sizeof(Person))){
+          perror("Error");
+          return -1;
+        }
 
         if(input.id_ctrl == id_ctrl) {
-            write(outputFileDesc, &input, sizeof(Person));
+            if(!write(outputFileDesc, &input, sizeof(Person))) {
+              perror("Error");
+              return -1;
+            }
         }
     }
 

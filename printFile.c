@@ -9,7 +9,7 @@ int readBinary(char* inputFile);
 int main(int argc, char *argv[]){
     /* Check that the arguments number is correct */
     if(argc != 2) {
-        printf("Error: Wrong arguments number");
+        printf("Error: Wrong arguments number\n");
         return -1;
     }
 
@@ -44,7 +44,10 @@ int readBinary(char* inputFile) {
     for(i = 0; i < fileRows; i++) {
         /* This line read each struct in the file and save the value in the
          * auxiliary struct input */
-        read(inputFileDesc, &input, sizeof(Person));
+        if(read(inputFileDesc, &input, sizeof(Person))) {
+          perror("Error");
+          return -1;
+        }
 
         /* Prints in std output the current entry of the binary file */
         printf("%s\t%d\t%.8u\t%c\t%.0f\n", input.name, input.age, input.id,

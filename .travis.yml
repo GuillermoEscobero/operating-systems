@@ -2,9 +2,9 @@ language: c
 
 compiler: gcc
 
+before_script:
+  - aptitude install byacc flex
+
 script:
   - make
 
-after_success:
-  - ./printFile samples/personas_1718.per
-  - ./statistics samples/personas_1718.per

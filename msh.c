@@ -82,12 +82,38 @@ void store_command(char ***argvv, char *filev[3], int bg, struct command *cmd) {
 }
 
 
-int singleCommandExecutor(char ** argvv) {
-    printf("Single command bru\n");
-    return 0;
+int single_command_executor(char **argvv) {
+    int executed_command_returning_value;
+    pid_t child_pid;
+    pid_t pid = fork();
+    switch (pid) {
+        case -1:
+            perror("Error creating the child\n");
+            return -1;
+        case 0:
+            printf("Child <%d>\n", getpid());
+            execvp(&argvv[0][0], &argvv[0]);
+            return 0;
+        default:
+            child_pid = wait(&executed_command_returning_value);
+            if (child_pid != pid) {
+                perror("Error while waiting for the child\n");
+                return -1;
+            }
+            if (executed_command_returning_value < 0) {
+                perror("Error while executing the command\n");
+                return -1;
+            }
+            printf("Wait child <%d>\n", child_pid);
+            return 0;
+    }
 }
 
-int pipedCommandExecutor() {
+int piped_command_executor(char ***argvv, int num_commands, int ret) {
+    printf("Piped command bru\n");
+    for (int i = 0; i < num_commands; ++i) {
+
+    }
     return 0;
 }
 
@@ -118,7 +144,9 @@ int main(void) {
  */
 
         if (num_commands == 1) {
-            singleCommandExecutor(argvv[0]);
+            single_command_executor(argvv[0]);
+        } else {
+            piped_command_executor(argvv, num_commands, ret);
         }
 
 

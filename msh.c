@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 extern int obtain_order();        /* See parser.y for description */
 
@@ -81,9 +83,88 @@ void store_command(char ***argvv, char *filev[3], int bg, struct command *cmd) {
     }
 }
 
+int is_redirected(char **filev) {
+    if (filev[0] != NULL || filev[1] != NULL || filev[2] != NULL) {
+        return 1;
+    }
+    return 0;
+}
 
-int single_command_executor(char **argvv) {
-    int executed_command_returning_value;
+int redirected_command_executor(char ***argvv, char **filev) {
+    int syscall_status;
+    int executed_command_status;
+    pid_t child_pid;
+
+    int pipe_fd[2];
+    pipe(pipe_fd);
+
+    pid_t pid = fork();
+    switch (pid) {
+        case -1:
+            perror("Error creating the child\n");
+            return -1;
+        case 0:
+            printf("Child <%d>\n", getpid());
+            close(STDOUT_FILENO);
+            dup(pipe_fd[STDOUT_FILENO]);
+            close(pipe_fd[STDOUT_FILENO]);
+            close(pipe_fd[STDIN_FILENO]);
+
+            //ERROR: que pasa si no es single command?
+            syscall_status = execvp(argvv[0][0], argvv[0]);
+            if (syscall_status < 0) {
+                // The syscall exec() did not find the command required to execute
+                perror("Error in the execution of the command\n");
+                exit(-1);
+            }
+        default:
+            close(STDIN_FILENO);
+            dup(pipe_fd[STDIN_FILENO]);
+            close(pipe_fd[STDIN_FILENO]);
+            close(pipe_fd[STDOUT_FILENO]);
+
+            int file_descriptor;
+            void *buffer;
+
+            if (filev[0] != NULL) {
+                file_descriptor = open(filev[0], O_RDONLY);
+
+            } else if (filev[1] != NULL) {
+                file_descriptor = open(filev[1], O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU + S_IRWXG + S_IRWXO);
+
+            } else {
+                file_descriptor = open(filev[2], O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU + S_IRWXG + S_IRWXO);
+
+            }
+            //TODO: hacerlo para toods los casos
+            struct stat st;
+            stat(filev[1], &st);
+            size_t binary_size = st.st_size;
+
+            buffer = malloc(binary_size);
+
+            wait(&executed_command_status);
+            if (executed_command_status != 0) {
+                // The command exited with a number diferent from 0
+                perror("Error while executing the command\n");
+                return -1;
+            }
+
+            read(STDIN_FILENO, &buffer, binary_size);
+            write(file_descriptor, &buffer, binary_size);
+
+            close(STDIN_FILENO);
+            close(file_descriptor);
+
+            //ERROR: no funca pero si hace el archivo, algun wait o algo hay que hacer
+            return 0;
+
+    }
+}
+
+int single_command_executor(char ***argvv, int bg) {
+    int syscall_status;
+    int executed_command_status;
     pid_t child_pid;
     pid_t pid = fork();
     switch (pid) {
@@ -92,24 +173,35 @@ int single_command_executor(char **argvv) {
             return -1;
         case 0:
             printf("Child <%d>\n", getpid());
-            execvp(&argvv[0][0], &argvv[0]);
-            return 0;
+            syscall_status = execvp(argvv[0][0], argvv[0]);
+            if (syscall_status < 0) {
+                // The syscall exec() did not find the command required to execute
+                perror("Error in the execution of the command\n");
+                exit(-1);
+            }
         default:
-            child_pid = wait(&executed_command_returning_value);
-            if (child_pid != pid) {
-                perror("Error while waiting for the child\n");
-                return -1;
+            if (!bg) {
+                /* Wait for the children created in the fork, not children from previous forks  */
+                child_pid = waitpid(pid, &executed_command_status, 0);
+
+                if (child_pid != pid) {
+                    perror("Error while waiting for the child\n");
+                    return -1;
+                }
+
+                if (executed_command_status != 0) {
+                    // The command exited with a number diferent from 0
+                    perror("Error while executing the command\n");
+                    return -1;
+                }
+                printf("Wait child <%d>\n", child_pid);
             }
-            if (executed_command_returning_value < 0) {
-                perror("Error while executing the command\n");
-                return -1;
-            }
-            printf("Wait child <%d>\n", child_pid);
             return 0;
+
     }
 }
 
-int piped_command_executor(char ***argvv, int num_commands, int ret) {
+int piped_command_executor(char ***argvv, int num_commands) {
     printf("Piped command bru\n");
     for (int i = 0; i < num_commands; ++i) {
 
@@ -143,10 +235,13 @@ int main(void) {
  * argvv AND filev. THESE LINES MUST BE REMOVED.
  */
 
+        if (is_redirected(filev)) {
+            redirected_command_executor(argvv, filev);
+        }
         if (num_commands == 1) {
-            single_command_executor(argvv[0]);
+            single_command_executor(argvv, bg);
         } else {
-            piped_command_executor(argvv, num_commands, ret);
+            piped_command_executor(argvv, num_commands);
         }
 
 

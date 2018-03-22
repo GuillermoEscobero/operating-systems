@@ -14,6 +14,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 extern int obtain_order();        /* See parser.y for description */
 
@@ -46,6 +47,7 @@ void free_command(struct command *cmd) {
     int f;
     for (f = 0; f < 3; f++) {
         free((*cmd).filev[f]);
+        (*cmd).filev[f] = NULL;
     }
 }
 
@@ -101,7 +103,7 @@ int redirected_command_executor(char ***argvv, char **filev) {
     pid_t pid = fork();
     switch (pid) {
         case -1:
-            perror("Error creating the child\n");
+            perror("Error creating the child");
             return -1;
         case 0:
             printf("Child <%d>\n", getpid());
@@ -114,7 +116,7 @@ int redirected_command_executor(char ***argvv, char **filev) {
             syscall_status = execvp(argvv[0][0], argvv[0]);
             if (syscall_status < 0) {
                 // The syscall exec() did not find the command required to execute
-                perror("Error in the execution of the command\n");
+                perror("Error in the execution of the command");
                 exit(-1);
             }
         default:
@@ -146,7 +148,7 @@ int redirected_command_executor(char ***argvv, char **filev) {
             wait(&executed_command_status);
             if (executed_command_status != 0) {
                 // The command exited with a number diferent from 0
-                perror("Error while executing the command\n");
+                perror("Error while executing the command");
                 return -1;
             }
 
@@ -169,35 +171,35 @@ int single_command_executor(char ***argvv, int bg) {
     pid_t pid = fork();
     switch (pid) {
         case -1:
-            perror("Error creating the child\n");
+            perror("Error creating the child");
             return -1;
         case 0:
             printf("Child <%d>\n", getpid());
             syscall_status = execvp(argvv[0][0], argvv[0]);
             if (syscall_status < 0) {
                 // The syscall exec() did not find the command required to execute
-                perror("Error in the execution of the command\n");
-                exit(-1);
+                perror("Error in the execution of the command");
+                exit(syscall_status);
             }
+            break;
         default:
             if (!bg) {
                 /* Wait for the children created in the fork, not children from previous forks  */
                 child_pid = waitpid(pid, &executed_command_status, 0);
 
                 if (child_pid != pid) {
-                    perror("Error while waiting for the child\n");
+                    perror("Error while waiting for the child");
                     return -1;
                 }
 
                 if (executed_command_status != 0) {
                     // The command exited with a number diferent from 0
-                    perror("Error while executing the command\n");
+                    perror("Error while executing the command");
                     return -1;
                 }
                 printf("Wait child <%d>\n", child_pid);
             }
             return 0;
-
     }
 }
 

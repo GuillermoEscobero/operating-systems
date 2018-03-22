@@ -169,6 +169,7 @@ int single_command_executor(char ***argvv, int bg) {
     int executed_command_status;
     pid_t child_pid;
     pid_t pid = fork();
+    
     switch (pid) {
         case -1:
             perror("Error creating the child");
@@ -192,11 +193,11 @@ int single_command_executor(char ***argvv, int bg) {
                     return -1;
                 }
 
-                if (executed_command_status != 0) {
+                /*if (executed_command_status != 0) {
                     // The command exited with a number diferent from 0
                     perror("Error while executing the command");
                     return -1;
-                }
+                }*/
                 printf("Wait child <%d>\n", child_pid);
             }
             return 0;
@@ -204,10 +205,35 @@ int single_command_executor(char ***argvv, int bg) {
 }
 
 int piped_command_executor(char ***argvv, int num_commands) {
-    printf("Piped command bru\n");
-    for (int i = 0; i < num_commands; ++i) {
-
+    /* printf("Piped command bru\n"); */
+    if(num_commands > 3) {
+        printf("Error: number of commands exceeded\n");
+        return -1;
     }
+
+    int p[num_commands-1][2];
+
+    int i;
+
+    int pid;
+
+    for(i = 0; i < num_commands-1; i++) {
+        pipe(p[i]);
+
+        pid = fork();
+
+        switch(pid) {
+            case -1:
+                perror("Error creating the child");
+                return -1;
+            case 0:
+                close(STDOUT_FILENO);
+                dup(p[i][STDOUT_FILENO]);
+                close(p[i][STDOUT_FILENO]);
+                close(p[i][STDOUT_FILENO]);
+        }
+    }
+
     return 0;
 }
 

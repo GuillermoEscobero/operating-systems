@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 
 extern int obtain_order();        /* See parser.y for description */
 
@@ -211,6 +212,24 @@ int piped_command_executor(char ***argvv, int num_commands) {
     return 0;
 }
 
+int mytime(time_t start) {
+  time_t now;
+  double diff_t;
+  int hours, mins, secs, remainder;
+
+  time(&now);
+  diff_t = difftime(now, start);
+
+  hours = diff_t / 3600;
+  remainder = (long)diff_t % 3600;
+  mins = remainder / 60;
+  secs = remainder % 60;
+
+  printf("Uptime: %d h. %d min. %d s.\n", hours, mins, secs);
+
+  return 0;
+}
+
 int main(void) {
     char ***argvv;
     int command_counter;
@@ -222,6 +241,9 @@ int main(void) {
 
     setbuf(stdout, NULL);            /* Unbuffered */
     setbuf(stdin, NULL);
+
+    time_t start_t;
+    time(&start_t);
 
     while (1) {
         fprintf(stderr, "%s", "msh> ");    /* Prompt */
@@ -236,6 +258,10 @@ int main(void) {
  * THE FOLLOWING LINES ONLY GIVE AN IDEA OF HOW TO USE THE STRUCTURES
  * argvv AND filev. THESE LINES MUST BE REMOVED.
  */
+        if(strcmp(argvv[0][0], "mytime") == 0) {
+            mytime(start_t);
+            continue;
+        }
 
         if (is_redirected(filev)) {
             redirected_command_executor(argvv, filev);
@@ -296,5 +322,3 @@ int main(void) {
     return 0;
 
 } //end main
-
-

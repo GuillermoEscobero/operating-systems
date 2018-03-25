@@ -211,6 +211,23 @@ int piped_command_executor(char ***argvv, int num_commands) {
     return 0;
 }
 
+int mycd(char *path) {
+    if(chdir(path) < 0) {
+        perror("mycd error");
+        return -1;
+    }
+
+    char* final_dir = getcwd(NULL, 0);
+
+    if(final_dir == NULL) {
+        perror("getcwd error");
+        return -1;
+    }
+
+    printf("%s\n", final_dir);
+    return 0;
+}
+
 int main(void) {
     char ***argvv;
     int command_counter;
@@ -237,6 +254,11 @@ int main(void) {
  * argvv AND filev. THESE LINES MUST BE REMOVED.
  */
 
+        if(strcmp(argvv[0][0], "mycd") == 0) {
+            mycd(argvv[0][1]);
+            continue;
+        }
+        
         if (is_redirected(filev)) {
             redirected_command_executor(argvv, filev);
         }

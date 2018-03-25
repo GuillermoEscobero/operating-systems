@@ -212,11 +212,13 @@ int piped_command_executor(char ***argvv, int num_commands) {
 }
 
 int mycd(char *path) {
+    /* Change path to new one */
     if(chdir(path) < 0) {
         perror("mycd error");
         return -1;
     }
 
+    /* Get the absolute path of the changed directory */
     char* final_dir = getcwd(NULL, 0);
 
     if(final_dir == NULL) {
@@ -258,7 +260,7 @@ int main(void) {
             mycd(argvv[0][1]);
             continue;
         }
-        
+
         if (is_redirected(filev)) {
             redirected_command_executor(argvv, filev);
         }
@@ -318,5 +320,3 @@ int main(void) {
     return 0;
 
 } //end main
-
-

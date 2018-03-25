@@ -208,19 +208,21 @@ int single_command_executor(char ***argvv, int bg) {
 }
 
 int piped_command_executor(char ***argvv, char **filev, int num_commands, int bg) {
+        /* Check requirement of maximum number of commands */
         if(num_commands > MAX_PIPED_COMMANDS) {
                 printf("Error: number of commands exceeded\n");
                 return -1;
         }
 
-        int p[num_commands-1][2];
-        pid_t pid;
-        int i;
-        int status;
-        int child_pid;
+        int p[num_commands-1][2]; /* Need N-1 pipes for N commands */
+        pid_t pid, child_pid;     /* Parent and children pids */
+        int i;                    /* Loop iterator */
+        int status;               /* Exit code of child */
 
+        /* Loop for each command */
         for(i = 0; i < num_commands; i++) {
 
+                /* Initialization of pipes */
                 if(i < num_commands-1) {
                         if(pipe(p[i]) < 0) {
                                 perror("Error creating pipe");
@@ -228,6 +230,7 @@ int piped_command_executor(char ***argvv, char **filev, int num_commands, int bg
                         }
                 }
 
+                /* Child creation */
                 pid = fork();
 
                 switch(pid) {
@@ -236,101 +239,110 @@ int piped_command_executor(char ***argvv, char **filev, int num_commands, int bg
                         return -1;
                 case 0:
                         /* CHILD */
-                        printf("Child <%d>\n", getpid());
+                        printf("Child %d\n", getpid());
 
+                        /* Redirection of standard output to pipe, except last command */
                         if(i != num_commands-1) {
                                 if (close(STDOUT_FILENO) < 0) {
-                                        perror(""); /* TODO */
+                                        perror("Error closing standard output");
                                         return -1;
                                 }
                                 if (dup(p[i][STDOUT_FILENO]) < 0) {
-                                        perror(""); /* TODO */
+                                        perror("Error redirecting output to pipe");
                                         return -1;
                                 }
                                 if (close(p[i][STDOUT_FILENO]) < 0) {
-                                        perror(""); /* TODO */
+                                        perror("Error closing output of pipe");
                                         return -1;
                                 }
                                 if (close(p[i][STDIN_FILENO]) < 0) {
-                                        perror(""); /* TODO */
+                                        perror("Error closing input of pipe");
                                         return -1;
                                 }
                         }
 
-                        if((i == 0) && (filev[0] != NULL)) {
-                                if(close(STDIN_FILENO) < 0) {
-                                  perror(""); /* TODO */
-                                  return -1;
-                                }
-                                if(open(filev[0], O_RDONLY) < 0) {
-                                  perror(""); /* TODO */
-                                  return -1;
-                                }
-                        }
-
-                        if((i == (num_commands-1)) && (filev[1] != NULL)) {
-                                if(close(STDOUT_FILENO) < 0) {
-                                  perror(""); /* TODO */
-                                  return -1;
-                                }
-                                if(open(filev[1], O_CREAT|O_TRUNC|O_WRONLY, 0666) < 0) {
-                                  perror(""); /* TODO */
-                                  return -1;
-                                }
-                        }
-
+                        /* Redirection of standard input to pipe, except first command */
                         if(i != 0) {
                                 if (close(STDIN_FILENO) < 0) {
-                                  perror(""); /* TODO */
+                                  perror("Error closing standard input");
                                   return -1;
                                 }
                                 if (dup(p[i-1][STDIN_FILENO]) < 0) {
-                                  perror(""); /* TODO */
+                                  perror("Error redirecting input to pipe");
                                   return -1;
                                 }
                                 if (close(p[i-1][STDIN_FILENO]) < 0) {
-                                  perror(""); /* TODO */
+                                  perror("Error closing input of pipe");
                                   return -1;
                                 }
                                 if (close(p[i-1][STDOUT_FILENO]) < 0) {
-                                  perror(""); /* TODO */
+                                  perror("Error closing output of pipe");
                                   return -1;
                                 }
                         }
 
+                        /* Redirection of standard input of first command to file (if required) */
+                        if((i == 0) && (filev[0] != NULL)) {
+                                if(close(STDIN_FILENO) < 0) {
+                                  perror("Error closing standard input");
+                                  return -1;
+                                }
+                                if(open(filev[0], O_RDONLY) < 0) {
+                                  perror("Error opening file for input redirection");
+                                  return -1;
+                                }
+                        }
+
+                        /* Redirection of standard output of last command to file (if required) */
+                        if((i == (num_commands-1)) && (filev[1] != NULL)) {
+                                if(close(STDOUT_FILENO) < 0) {
+                                  perror("Error closing standard output");
+                                  return -1;
+                                }
+                                if(open(filev[1], O_CREAT|O_TRUNC|O_WRONLY, 0666) < 0) {
+                                  perror("Error opening file for output redirection");
+                                  return -1;
+                                }
+                        }
+
+                        /* Redirection of standard error output to file (if required) */
                         if(filev[2] != NULL) {
                                 if(close(STDERR_FILENO) < 0) {
-                                  perror(""); /* TODO */
+                                  perror("Error closing standard error output");
                                   return -1;
                                 }
                                 if(open(filev[2], O_CREAT|O_TRUNC|O_WRONLY, 0666) < 0) {
-                                  perror(""); /* TODO */
+                                  perror("Error opening file for error output redirection");
                                   return -1;
                                 }
                         }
 
+                        /* Execution of the command */
                         if(execvp(argvv[i][0], argvv[i]) < 0) {
-                                perror("Error executing a command");
+                                perror("Error while executing a command");
                                 exit(-1);
                         }
 
-                        break;
+                        break; /* End of child block */
 
                 default:
+                        /* PARENT */
+                        /* Clean used pipes */
                         if(i != 0) {
                                 if(close(p[i-1][STDOUT_FILENO]) < 0) {
-                                  perror(""); /* TODO */
+                                  perror("Error closing output of pipe");
                                   return -1;
                                 }
                                 if(close(p[i-1][STDIN_FILENO]) < 0) {
-                                  perror(""); /* TODO */
+                                  perror("Error closing input of pipe");
                                   return -1;
                                 }
                         }
 
+                        /* If not executed in background, wait for children */
                         if (bg == 0) {
                                 child_pid = wait(&status);
-                                printf("Wait child <%d>\n", child_pid);
+                                printf("Wait child %d\n", child_pid);
                         } else {
                                 printf("[%d]\n", pid);
                         }

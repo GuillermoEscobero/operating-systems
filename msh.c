@@ -212,17 +212,23 @@ int piped_command_executor(char ***argvv, int num_commands) {
 }
 
 int mycd(char *path) {
-    /* Change path to new one */
-    if(chdir(path) < 0) {
+    /* If no path is provided, get the HOME path */
+    if (path == NULL) {
+      if (chdir(getenv("HOME")) < 0) {
         perror("mycd error");
         return -1;
+      }
+    } else { /* Path provided */
+      if (chdir(path) < 0) {
+        perror("mycd error");
+        return -1;
+      }
     }
 
     /* Get the absolute path of the changed directory */
     char* final_dir = getcwd(NULL, 0);
-
     if(final_dir == NULL) {
-        perror("getcwd error");
+        perror("mycd error");
         return -1;
     }
 

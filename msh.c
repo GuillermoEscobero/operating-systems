@@ -16,6 +16,12 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
+#define INPUT_REDIRECTION 0
+#define OUTPUT_REDIRECTION 1
+#define ERROR_REDIRECTION 2
+#define MAX_STORED_COMMANDS 20
+
+
 extern int obtain_order();        /* See parser.y for description */
 
 struct command {
@@ -85,85 +91,6 @@ void store_command(char ***argvv, char *filev[3], int bg, struct command *cmd) {
     }
 }
 
-int is_redirected(char **filev) {
-    if (filev[0] != NULL || filev[1] != NULL || filev[2] != NULL) {
-        return 1;
-    }
-    return 0;
-}
-
-int redirected_command_executor(char ***argvv, char **filev) {
-    int syscall_status;
-    int executed_command_status;
-    pid_t child_pid;
-
-    int pipe_fd[2];
-    pipe(pipe_fd);
-
-    pid_t pid = fork();
-    switch (pid) {
-        case -1:
-            perror("Error creating the child");
-            return -1;
-        case 0:
-            printf("Child <%d>\n", getpid());
-            close(STDOUT_FILENO);
-            dup(pipe_fd[STDOUT_FILENO]);
-            close(pipe_fd[STDOUT_FILENO]);
-            close(pipe_fd[STDIN_FILENO]);
-
-            //ERROR: que pasa si no es single command?
-            syscall_status = execvp(argvv[0][0], argvv[0]);
-            if (syscall_status < 0) {
-                // The syscall exec() did not find the command required to execute
-                perror("Error in the execution of the command");
-                exit(-1);
-            }
-        default:
-            close(STDIN_FILENO);
-            dup(pipe_fd[STDIN_FILENO]);
-            close(pipe_fd[STDIN_FILENO]);
-            close(pipe_fd[STDOUT_FILENO]);
-
-            int file_descriptor;
-            void *buffer;
-
-            if (filev[0] != NULL) {
-                file_descriptor = open(filev[0], O_RDONLY);
-
-            } else if (filev[1] != NULL) {
-                file_descriptor = open(filev[1], O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU + S_IRWXG + S_IRWXO);
-
-            } else {
-                file_descriptor = open(filev[2], O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU + S_IRWXG + S_IRWXO);
-
-            }
-            //TODO: hacerlo para toods los casos
-            struct stat st;
-            stat(filev[1], &st);
-            size_t binary_size = st.st_size;
-
-            buffer = malloc(binary_size);
-
-            wait(&executed_command_status);
-            if (executed_command_status != 0) {
-                // The command exited with a number diferent from 0
-                perror("Error while executing the command");
-                return -1;
-            }
-
-            read(STDIN_FILENO, &buffer, binary_size);
-            write(file_descriptor, &buffer, binary_size);
-
-            close(STDIN_FILENO);
-            close(file_descriptor);
-
-            //ERROR: no funca pero si hace el archivo, algun wait o algo hay que hacer
-            return 0;
-
-    }
-}
-
 int single_command_executor(char ***argvv, int bg) {
     int syscall_status;
     int executed_command_status;
@@ -192,15 +119,16 @@ int single_command_executor(char ***argvv, int bg) {
                     return -1;
                 }
 
-                if (executed_command_status != 0) {
-                    // The command exited with a number diferent from 0
-                    perror("Error while executing the command");
-                    return -1;
-                }
+                //if (executed_command_status != 0) {
+                //    // The command exited with a number diferent from 0
+                //    perror("Error while executing the command");
+                //    return -1;
+                //}
                 printf("Wait child <%d>\n", child_pid);
             }
-            return 0;
     }
+    return 0;
+
 }
 
 int piped_command_executor(char ***argvv, int num_commands) {
@@ -211,14 +139,142 @@ int piped_command_executor(char ***argvv, int num_commands) {
     return 0;
 }
 
+int is_redirected(char **filev) {
+    if (filev[0] != NULL || filev[1] != NULL || filev[2] != NULL) {
+        return 1;
+    }
+    return 0;
+}
+
+int get_redirection_type(char **filev) {
+    if (filev[0] != NULL && filev[1] == NULL && filev[2] == NULL) {
+        return INPUT_REDIRECTION;
+    } else if (filev[1] != NULL && filev[0] == NULL && filev[2] == NULL) {
+        return OUTPUT_REDIRECTION;
+    } else if (filev[2] != NULL && filev[0] == NULL && filev[1] == NULL) {
+        return ERROR_REDIRECTION;
+    }
+    // Else, there is more than one redirection
+    //TODO: meter aqui errores
+    return -1;
+}
+
+int file_redirector(char **filev) {
+    int file_descriptor;
+    int original_file_descriptor;
+
+    switch (get_redirection_type(filev)) {
+        case INPUT_REDIRECTION:
+            file_descriptor = open(filev[INPUT_REDIRECTION], O_RDONLY);
+            original_file_descriptor = dup(STDIN_FILENO);
+
+            // dup2 duplicates the file_descriptor using the file
+            // descriptor number from STDXX_FILENO, closing it automatically
+            dup2(file_descriptor, STDIN_FILENO);
+            close(file_descriptor);
+            break;
+        case OUTPUT_REDIRECTION:
+            file_descriptor = open(filev[OUTPUT_REDIRECTION], O_WRONLY | O_CREAT | O_TRUNC,
+                                   S_IRWXU + S_IRWXG + S_IRWXO);
+            original_file_descriptor = dup(STDOUT_FILENO);
+
+            dup2(file_descriptor, STDOUT_FILENO);
+            close(file_descriptor);
+            break;
+        case ERROR_REDIRECTION:
+            file_descriptor = open(filev[ERROR_REDIRECTION], O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU + S_IRWXG + S_IRWXO);
+            original_file_descriptor = dup(STDERR_FILENO);
+
+            dup2(file_descriptor, STDERR_FILENO);
+            close(file_descriptor);
+            break;
+        default:
+            // There is an error
+            perror("Error while reading the redirection attribute");
+            return -1;
+    }
+
+    return original_file_descriptor;
+
+
+}
+
+int restore_redirection(char **filev, int original_file_descriptor) {
+    switch (get_redirection_type(filev)) {
+        case INPUT_REDIRECTION:
+            dup2(original_file_descriptor, STDIN_FILENO);
+            close(original_file_descriptor);
+            break;
+        case OUTPUT_REDIRECTION:
+            dup2(original_file_descriptor, STDOUT_FILENO);
+            close(original_file_descriptor);
+            break;
+        case ERROR_REDIRECTION:
+            dup2(original_file_descriptor, STDERR_FILENO);
+            close(original_file_descriptor);
+            break;
+        default:
+            // There is an error
+            perror("Error while reading the redirection attribute");
+            return -1;
+    }
+    return 0;
+}
+
+void redirected_command_executor(char **filev, char ***argvv, int bg) {
+    int original_file_descriptor;
+
+    original_file_descriptor = file_redirector(filev);
+    single_command_executor(argvv, bg);
+    restore_redirection(filev, original_file_descriptor);
+}
+
+void show_saved_commands(struct command *saved_commands, int number_executed_commands) {
+    for (int i = 0; i < number_executed_commands % MAX_STORED_COMMANDS; ++i) {
+        for (int j = 0; j < saved_commands[i].num_commands; ++j) {
+            for (int k = 0; k < saved_commands[i].args[j]; ++k) {
+                printf("%s ", saved_commands[i].argvv[j][k]);
+            }
+            if (saved_commands[i].bg) {
+                printf("& ");
+            }
+            if (saved_commands[i].num_commands != 1) {
+                printf("| ");
+            }
+        }
+        printf("\n");
+    }
+}
+
+void reorder_stored_commands(struct command *saved_commands) {
+    free_command(&saved_commands[0]);
+    for (int i = 0; i < MAX_STORED_COMMANDS - 1; ++i) {
+        saved_commands[i] = saved_commands[i + 1];
+    }
+}
+
+
+void
+store_struct_command(struct command *saved_commands, int *number_executed_commands, struct command current_command) {
+    if (*number_executed_commands >= MAX_STORED_COMMANDS) {
+        reorder_stored_commands(&*saved_commands);
+        saved_commands[MAX_STORED_COMMANDS - 1] = current_command;
+    } else {
+        saved_commands[*number_executed_commands] = current_command;
+        *number_executed_commands = *number_executed_commands + 1;
+    }
+}
+
 int main(void) {
     char ***argvv;
-    int command_counter;
+    // int command_counter;
     int num_commands;
-    int args_counter;
+    // int args_counter;
     char *filev[3];
     int bg;
     int ret;
+    struct command saved_commands[MAX_STORED_COMMANDS];
+    int number_executed_commands = 0;
 
     setbuf(stdout, NULL);            /* Unbuffered */
     setbuf(stdin, NULL);
@@ -236,56 +292,32 @@ int main(void) {
  * THE FOLLOWING LINES ONLY GIVE AN IDEA OF HOW TO USE THE STRUCTURES
  * argvv AND filev. THESE LINES MUST BE REMOVED.
  */
+        struct command current_command;
 
-        if (is_redirected(filev)) {
-            redirected_command_executor(argvv, filev);
-        }
         if (num_commands == 1) {
-            single_command_executor(argvv, bg);
+            if (is_redirected(filev)) {
+                //FIXME: si estas redireccionando myhistory no chuta, deberia funcionar?
+                redirected_command_executor(filev, argvv, bg);
+            } else if (!strcmp(argvv[0][0], "myhistory")) {
+                //if no number set
+                show_saved_commands(saved_commands, number_executed_commands);
+                //if a number is set
+                //saved_command_executor();
+            } else {
+                store_command(argvv, filev, bg, &current_command);
+                //FIXME: segmentation fault diiooooooooos
+                printf("number of saved commands %d\n", number_executed_commands);
+                store_struct_command(saved_commands, &number_executed_commands, current_command);
+
+                single_command_executor(argvv, bg);
+            }
         } else {
+            store_command(argvv, filev, bg, &current_command);
+            store_struct_command(saved_commands, &number_executed_commands, current_command);
+
             piped_command_executor(argvv, num_commands);
         }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        /*
-               for (command_counter = 0; command_counter < num_commands; command_counter++)
-               {
-                   *//* argvv: complete entry form the terminal ([0][0] = ls e.g.)*//*
-			for (args_counter = 0; (argvv[command_counter][args_counter] != NULL); args_counter++)
-			{
-				printf("%s ", argvv[command_counter][args_counter]);
-			}
-			printf("\n");
-		}
-
-		if (filev[0] != NULL) printf("< %s\n", filev[0]);*//* IN *//*
-
-		if (filev[1] != NULL) printf("> %s\n", filev[1]);*//* OUT *//*
-
-		if (filev[2] != NULL) printf(">& %s\n", filev[2]);*//* ERR *//*
-
-		if (bg) printf("&\n");
-*/
 
 /*
  * END OF THE PART TO BE REMOVED

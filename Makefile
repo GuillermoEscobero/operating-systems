@@ -17,7 +17,7 @@ OBJS	= parser.o scanner.o y.o msh.o
 all: msh
 
 msh: $(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(CLION_EXE_DIR)$(OBJS)
 
 clean:
 	rm -f *.tab.? *.o *.bak *~ parser.c scanner.c core msh

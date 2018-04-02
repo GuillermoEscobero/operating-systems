@@ -257,15 +257,16 @@ void reorder_stored_commands(struct command *saved_commands) {
 
 
 void
-store_struct_command(struct command *saved_commands, int *number_executed_commands, struct command current_command) {
+store_struct_command(struct command **saved_commands, int *number_executed_commands, struct command current_command) {
 
     if (*number_executed_commands < MAX_STORED_COMMANDS) {
-        saved_commands[*number_executed_commands] = current_command;
+        //invalid write of size 8
+        *saved_commands[*number_executed_commands] = current_command;
         *number_executed_commands = *number_executed_commands + 1;
 
     } else {
-        reorder_stored_commands(&*saved_commands);
-        saved_commands[MAX_STORED_COMMANDS - 1] = current_command;
+        reorder_stored_commands(*saved_commands);
+        *saved_commands[MAX_STORED_COMMANDS - 1] = current_command;
 
     }
 
@@ -302,8 +303,7 @@ int main(void) {
  * THE FOLLOWING LINES ONLY GIVE AN IDEA OF HOW TO USE THE STRUCTURES
  * argvv AND filev. THESE LINES MUST BE REMOVED.
  */
-        struct command *current_command; //FIXME:
-        current_command = malloc(sizeof(struct command));
+        struct command *current_command = malloc(sizeof(struct command));
 
         if (num_commands == 1) {
             if (is_redirected(filev)) {
@@ -316,14 +316,13 @@ int main(void) {
                 //saved_command_executor();
             } else {
                 store_command(argvv, filev, bg, current_command);
-                //FIXME: segmentation fault diiooooooooos
-                store_struct_command(*saved_commands, &number_executed_commands, *current_command);
+                store_struct_command(saved_commands, &number_executed_commands, *current_command);
 
                 single_command_executor(argvv, bg);
             }
         } else {
             store_command(argvv, filev, bg, current_command);
-            store_struct_command(*saved_commands, &number_executed_commands, *current_command);
+            store_struct_command(saved_commands, &number_executed_commands, *current_command);
 
             piped_command_executor(argvv, num_commands);
         }

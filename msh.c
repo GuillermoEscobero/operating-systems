@@ -23,7 +23,6 @@
 
 
 extern int obtain_order();        /* See parser.y for description */
-
 struct command {
     // Store the number of commands in argvv
     int num_commands;
@@ -40,6 +39,7 @@ struct command {
 void free_command(struct command *cmd) {
     if ((*cmd).argvv != NULL) {
         char **argv;
+        printf("%s", *argv );
         for (; (*cmd).argvv && *(*cmd).argvv; (*cmd).argvv++) {
             for (argv = *(*cmd).argvv; argv && *argv; argv++) {
                 if (*argv) {
@@ -248,8 +248,8 @@ void show_saved_commands(struct command *saved_commands, int number_executed_com
     }
 }
 
-void reorder_stored_commands(struct command *saved_commands) {
-    free_command(&saved_commands[0]);
+void reorder_stored_commands(struct command **saved_commands) {
+    free_command(saved_commands[0]);
     for (int i = 0; i < MAX_STORED_COMMANDS - 1; ++i) {
         saved_commands[i] = saved_commands[i + 1];
     }
@@ -258,14 +258,12 @@ void reorder_stored_commands(struct command *saved_commands) {
 
 void
 store_struct_command(struct command **saved_commands, int *number_executed_commands, struct command current_command) {
-
     if (*number_executed_commands < MAX_STORED_COMMANDS) {
-        //invalid write of size 8
         *saved_commands[*number_executed_commands] = current_command;
         *number_executed_commands = *number_executed_commands + 1;
 
     } else {
-        reorder_stored_commands(*saved_commands);
+        reorder_stored_commands(&*saved_commands);
         *saved_commands[MAX_STORED_COMMANDS - 1] = current_command;
 
     }
@@ -284,6 +282,13 @@ int main(void) {
     saved_commands = malloc(sizeof(struct command) * MAX_STORED_COMMANDS);
     for (int i = 0; i < MAX_STORED_COMMANDS; ++i) {
         saved_commands[i] = malloc(sizeof(struct command));
+        saved_commands[i]->args = malloc(sizeof(char) * 40);
+        saved_commands[i]->argvv = malloc(sizeof(char) * 40);
+        *saved_commands[i]->argvv = malloc(sizeof(char) * 40);
+        **saved_commands[i]->argvv = malloc(sizeof(char) * 40);
+        saved_commands[i]->filev[0] = malloc(sizeof(char) * 40);
+        saved_commands[i]->filev[1] = malloc(sizeof(char) * 40);
+        saved_commands[i]->filev[2] = malloc(sizeof(char) * 40);
     }
     int number_executed_commands = 0;
 
@@ -303,7 +308,15 @@ int main(void) {
  * THE FOLLOWING LINES ONLY GIVE AN IDEA OF HOW TO USE THE STRUCTURES
  * argvv AND filev. THESE LINES MUST BE REMOVED.
  */
-        struct command *current_command = malloc(sizeof(struct command));
+        struct command *current_command;
+        current_command = malloc(sizeof(struct command));
+        current_command->args = malloc(sizeof(char) * 40);
+        current_command->argvv = malloc(sizeof(char) * 40);
+        *current_command->argvv = malloc(sizeof(char) * 40);
+        **current_command->argvv = malloc(sizeof(char) * 40);
+        current_command->filev[0] = malloc(sizeof(char) * 40);
+        current_command->filev[1] = malloc(sizeof(char) * 40);
+        current_command->filev[2] = malloc(sizeof(char) * 40);
 
         if (num_commands == 1) {
             if (is_redirected(filev)) {
@@ -311,10 +324,13 @@ int main(void) {
                 redirected_command_executor(filev, argvv, bg);
             } else if (!strcmp(argvv[0][0], "myhistory")) {
                 //if no number set
+                //FIXME:
                 show_saved_commands(*saved_commands, number_executed_commands);
                 //if a number is set
                 //saved_command_executor();
             } else {
+                if (current_command->argvv[0][0] == "10"){
+                }
                 store_command(argvv, filev, bg, current_command);
                 store_struct_command(saved_commands, &number_executed_commands, *current_command);
 

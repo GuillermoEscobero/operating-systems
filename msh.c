@@ -230,17 +230,19 @@ void redirected_command_executor(char **filev, char ***argvv, int bg) {
 }
 
 void show_saved_commands(struct command *saved_commands, int number_executed_commands) {
-    for (int i = 0; i < number_executed_commands % MAX_STORED_COMMANDS; ++i) {
+    for (int i = 0; i < number_executed_commands; ++i) {
+        printf("%d ", i);
         for (int j = 0; j < saved_commands[i].num_commands; ++j) {
             for (int k = 0; k < saved_commands[i].args[j]; ++k) {
                 printf("%s ", saved_commands[i].argvv[j][k]);
             }
-            if (saved_commands[i].bg) {
-                printf("& ");
-            }
-            if (saved_commands[i].num_commands != 1) {
+
+            if (saved_commands[i].num_commands != 1 && saved_commands[i].num_commands != j + 1) {
                 printf("| ");
             }
+        }
+        if (saved_commands[i].bg) {
+            printf("& ");
         }
         printf("\n");
     }
@@ -256,13 +258,16 @@ void reorder_stored_commands(struct command *saved_commands) {
 
 void
 store_struct_command(struct command *saved_commands, int *number_executed_commands, struct command current_command) {
-    if (*number_executed_commands >= MAX_STORED_COMMANDS) {
-        reorder_stored_commands(&*saved_commands);
-        saved_commands[MAX_STORED_COMMANDS - 1] = current_command;
-    } else {
+    if (*number_executed_commands < MAX_STORED_COMMANDS) {
         saved_commands[*number_executed_commands] = current_command;
         *number_executed_commands = *number_executed_commands + 1;
+
+    } else {
+        reorder_stored_commands(&*saved_commands);
+        saved_commands[MAX_STORED_COMMANDS - 1] = current_command;
+
     }
+
 }
 
 int main(void) {
@@ -273,7 +278,8 @@ int main(void) {
     char *filev[3];
     int bg;
     int ret;
-    struct command saved_commands[MAX_STORED_COMMANDS];
+    struct command *saved_commands;
+    saved_commands = malloc(sizeof(struct command) * MAX_STORED_COMMANDS);
     int number_executed_commands = 0;
 
     setbuf(stdout, NULL);            /* Unbuffered */
@@ -306,7 +312,6 @@ int main(void) {
             } else {
                 store_command(argvv, filev, bg, &current_command);
                 //FIXME: segmentation fault diiooooooooos
-                printf("number of saved commands %d\n", number_executed_commands);
                 store_struct_command(saved_commands, &number_executed_commands, current_command);
 
                 single_command_executor(argvv, bg);

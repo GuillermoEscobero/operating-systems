@@ -116,43 +116,28 @@ int get_redirection_type(char **filev) {
 
 int show_saved_commands(struct command **saved_commands, int number_executed_commands) {
     int i;
+    int command_counter;
+    int args_counter;
     for (i = 0; i < number_executed_commands; ++i) {
         printf("%d ", i);
-        int j;
-        for (j = 0; j < saved_commands[i]->num_commands; ++j) {
-            int k;
-            for (k = 0; k < saved_commands[i]->args[j]; ++k) {
-                printf("%s ", saved_commands[i]->argvv[j][k]);
+        for (command_counter = 0; command_counter < saved_commands[i]->num_commands; command_counter++) {
+            for (args_counter = 0; (saved_commands[i]->argvv[command_counter][args_counter] != NULL); args_counter++) {
+                printf("%s ", saved_commands[i]->argvv[command_counter][args_counter]);
             }
-            if (is_redirected(saved_commands[i]->filev)) {
-                switch (get_redirection_type((saved_commands[i]->filev))) {
-                    case INPUT_REDIRECTION:
-                        printf("< ");
-                        printf("%s", saved_commands[i]->filev[INPUT_REDIRECTION]);
-                        break;
-                    case OUTPUT_REDIRECTION:
-                        printf("> ");
-                        printf("%s", saved_commands[i]->filev[OUTPUT_REDIRECTION]);
-                        break;
-                    case ERROR_REDIRECTION:
-                        printf(">& ");
-                        printf("%s", saved_commands[i]->filev[ERROR_REDIRECTION]);
-                        break;
-                    default:
-                        perror("Error while reading the redirection attribute");
-                        return -1;
-                }
-            }
-
-            if (saved_commands[i]->num_commands != 1 && saved_commands[i]->num_commands != j + 1) {
+            if (command_counter != saved_commands[i]->num_commands - 1) {
                 printf("| ");
             }
         }
-        if (saved_commands[i]->bg) {
-            printf("& ");
-        }
+
+        if (saved_commands[i]->filev[0] != NULL) printf("< %s ", saved_commands[i]->filev[0]);/* IN */
+
+        if (saved_commands[i]->filev[1] != NULL) printf("> %s ", saved_commands[i]->filev[1]);/* OUT */
+
+        if (saved_commands[i]->filev[2] != NULL) printf(">& %s ", saved_commands[i]->filev[2]);/* ERR */
+
+        if (saved_commands[i]->bg) printf("& ");
+
         printf("\n");
-        //FIXME: cuando tengo redireccion se va a la puta
     }
     return 0;
 }
@@ -412,8 +397,7 @@ int myhistory(char ***argvv, struct command **saved_commands, int *number_execut
     if (argvv[0][1] == NULL) {
         show_saved_commands(saved_commands, *number_executed_commands);
     } else {
-        //FIXME: si aun no esta lleno esto no da error
-        if (atoi(argvv[0][1]) >= 0 && atoi(argvv[0][1]) < MAX_STORED_COMMANDS) {
+        if (atoi(argvv[0][1]) >= 0 && atoi(argvv[0][1]) < MAX_STORED_COMMANDS && atoi(argvv[0][1]) < *number_executed_commands) {
             printf("Running command %s\n", argvv[0][1]);
             saved_command_executor(saved_commands, atoi(argvv[0][1]), num_commands);
         } else {
@@ -474,9 +458,7 @@ int myexit() {
 
 int main(void) {
     char ***argvv;
-    // int command_counter;
     int num_commands;
-    // int args_counter;
     char *filev[3];
     int bg;
     int ret;

@@ -413,7 +413,7 @@ int main(void) {
         if (num_commands == 1) {
             single_command_executor(argvv, bg);
         } else {
-            piped_command_executor(argvv, num_commands);
+            piped_command_executor(argvv, filev, num_commands, bg);
         }
 
 

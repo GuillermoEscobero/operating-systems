@@ -39,7 +39,6 @@ struct command {
 void free_command(struct command *cmd) {
     if ((*cmd).argvv != NULL) {
         char **argv;
-        printf("%s", *argv );
         for (; (*cmd).argvv && *(*cmd).argvv; (*cmd).argvv++) {
             for (argv = *(*cmd).argvv; argv && *argv; argv++) {
                 if (*argv) {
@@ -229,19 +228,19 @@ void redirected_command_executor(char **filev, char ***argvv, int bg) {
     restore_redirection(filev, original_file_descriptor);
 }
 
-void show_saved_commands(struct command *saved_commands, int number_executed_commands) {
+void show_saved_commands(struct command **saved_commands, int number_executed_commands) {
     for (int i = 0; i < number_executed_commands; ++i) {
         printf("%d ", i);
-        for (int j = 0; j < saved_commands[i].num_commands; ++j) {
-            for (int k = 0; k < saved_commands[i].args[j]; ++k) {
-                printf("%s ", saved_commands[i].argvv[j][k]);
+        for (int j = 0; j < saved_commands[i]->num_commands; ++j) {
+            for (int k = 0; k < saved_commands[i]->args[j]; ++k) {
+                printf("%s ", saved_commands[i]->argvv[j][k]);
             }
 
-            if (saved_commands[i].num_commands != 1 && saved_commands[i].num_commands != j + 1) {
+            if (saved_commands[i]->num_commands != 1 && saved_commands[i]->num_commands != j + 1) {
                 printf("| ");
             }
         }
-        if (saved_commands[i].bg) {
+        if (saved_commands[i]->bg) {
             printf("& ");
         }
         printf("\n");
@@ -249,9 +248,9 @@ void show_saved_commands(struct command *saved_commands, int number_executed_com
 }
 
 void reorder_stored_commands(struct command **saved_commands) {
-    free_command(saved_commands[0]);
+    //free_command(saved_commands[0]);
     for (int i = 0; i < MAX_STORED_COMMANDS - 1; ++i) {
-        saved_commands[i] = saved_commands[i + 1];
+        memcpy(saved_commands[i], saved_commands[i + 1], sizeof(struct command));
     }
 }
 
@@ -259,13 +258,26 @@ void reorder_stored_commands(struct command **saved_commands) {
 void
 store_struct_command(struct command **saved_commands, int *number_executed_commands, struct command current_command) {
     if (*number_executed_commands < MAX_STORED_COMMANDS) {
-        *saved_commands[*number_executed_commands] = current_command;
+        memcpy(saved_commands[*number_executed_commands], &current_command, sizeof(struct command));
         *number_executed_commands = *number_executed_commands + 1;
 
     } else {
-        reorder_stored_commands(&*saved_commands);
-        *saved_commands[MAX_STORED_COMMANDS - 1] = current_command;
+        reorder_stored_commands(saved_commands);
+        memcpy(saved_commands[MAX_STORED_COMMANDS - 1], &current_command, sizeof(struct command));
+    }
 
+}
+
+void saved_command_executor(struct command **saved_commands, int possition, int num_commands) {
+    if (saved_commands[possition]->num_commands == 1) {
+        if (is_redirected(saved_commands[possition]->filev)) {
+            redirected_command_executor(saved_commands[possition]->filev, saved_commands[possition]->argvv, saved_commands[possition]->bg);
+        } else {
+            single_command_executor(saved_commands[possition]->argvv, saved_commands[possition]->bg);
+
+        }
+    } else {
+        piped_command_executor(saved_commands[possition]->argvv, num_commands);
     }
 
 }
@@ -311,7 +323,7 @@ int main(void) {
         struct command *current_command;
         current_command = malloc(sizeof(struct command));
         current_command->args = malloc(sizeof(char) * 40);
-        current_command->argvv = malloc(sizeof(char) * 40);
+        current_command->argvv = malloc(sizeof(char *) * 40);
         *current_command->argvv = malloc(sizeof(char) * 40);
         **current_command->argvv = malloc(sizeof(char) * 40);
         current_command->filev[0] = malloc(sizeof(char) * 40);
@@ -321,16 +333,22 @@ int main(void) {
         if (num_commands == 1) {
             if (is_redirected(filev)) {
                 //FIXME: si estas redireccionando myhistory no chuta, deberia funcionar?
+                store_command(argvv, filev, bg, current_command);
+                store_struct_command(saved_commands, &number_executed_commands, *current_command);
+
                 redirected_command_executor(filev, argvv, bg);
             } else if (!strcmp(argvv[0][0], "myhistory")) {
-                //if no number set
-                //FIXME:
-                show_saved_commands(*saved_commands, number_executed_commands);
-                //if a number is set
-                //saved_command_executor();
-            } else {
-                if (current_command->argvv[0][0] == "10"){
+                if (argvv[0][1] == NULL) {
+                    show_saved_commands(saved_commands, number_executed_commands);
+                } else {
+                    if (atoi(argvv[0][1]) >= 0 && atoi(argvv[0][1]) < MAX_STORED_COMMANDS) {
+                        saved_command_executor(saved_commands, atoi(argvv[0][1]), num_commands);
+                    } else {
+                        perror("Algo"); //TODO:
+                        return -1;
+                    }
                 }
+            } else {
                 store_command(argvv, filev, bg, current_command);
                 store_struct_command(saved_commands, &number_executed_commands, *current_command);
 

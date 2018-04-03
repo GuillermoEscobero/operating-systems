@@ -96,6 +96,9 @@ void store_command(char ***argvv, char *filev[3], int bg, struct command *cmd) {
 int is_redirected(char **filev) {
         if (filev[0] != NULL || filev[1] != NULL || filev[2] != NULL) {
           return 1;
+        } else {
+          return 0;
+        }
 }
 
 int single_command_executor(char ***argvv, int bg) {
@@ -521,7 +524,7 @@ void saved_command_executor(struct command **saved_commands, int possition, int 
 
         }
     } else {
-        piped_command_executor(saved_commands[possition]->argvv, num_commands);
+        piped_command_executor(saved_commands[possition]->argvv, filev, num_commands, bg);
     }
 
 }

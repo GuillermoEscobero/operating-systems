@@ -68,15 +68,15 @@ void store_command(char ***argvv, char *filev[3], int bg, struct command *cmd) {
     int f;
     for (f = 0; f < 3; f++) {
         if (filev[f] != NULL) {
-            (*cmd).filev[f] = (char *) malloc(strlen(filev[f]) * sizeof(char));
+            (*cmd).filev[f] = (char *) calloc(strlen(filev[f]), sizeof(char));
             strcpy((*cmd).filev[f], filev[f]);
         }
     }
 
     (*cmd).bg = bg;
     (*cmd).num_commands = num_commands;
-    (*cmd).argvv = (char ***) malloc((num_commands + 1) * sizeof(char **));
-    (*cmd).args = (int *) malloc(num_commands * sizeof(int));
+    (*cmd).argvv = (char ***) calloc((num_commands + 1), sizeof(char **));
+    (*cmd).args = (int *) calloc(num_commands, sizeof(int));
     int i;
     for (i = 0; i < num_commands; i++) {
         int args = 0;
@@ -84,10 +84,10 @@ void store_command(char ***argvv, char *filev[3], int bg, struct command *cmd) {
             args++;
         }
         (*cmd).args[i] = args;
-        (*cmd).argvv[i] = (char **) malloc((args + 1) * sizeof(char *));
+        (*cmd).argvv[i] = (char **) calloc((args + 1), sizeof(char *));
         int j;
         for (j = 0; j < args; j++) {
-            (*cmd).argvv[i][j] = (char *) malloc(strlen(argvv[i][j]) * sizeof(char));
+            (*cmd).argvv[i][j] = (char *) calloc(strlen(argvv[i][j]), sizeof(char));
             strcpy((*cmd).argvv[i][j], argvv[i][j]);
         }
     }
@@ -99,19 +99,6 @@ int is_redirected(char **filev) {
     } else {
         return 0;
     }
-}
-
-int get_redirection_type(char **filev) {
-    if (filev[0] != NULL && filev[1] == NULL && filev[2] == NULL) {
-        return INPUT_REDIRECTION;
-    } else if (filev[1] != NULL && filev[0] == NULL && filev[2] == NULL) {
-        return OUTPUT_REDIRECTION;
-    } else if (filev[2] != NULL && filev[0] == NULL && filev[1] == NULL) {
-        return ERROR_REDIRECTION;
-    }
-    // Else, there is more than one redirection
-    perror("Invalid redirection type");
-    return -1;
 }
 
 int show_saved_commands(struct command **saved_commands, int number_executed_commands) {
@@ -397,7 +384,8 @@ int myhistory(char ***argvv, struct command **saved_commands, int *number_execut
     if (argvv[0][1] == NULL) {
         show_saved_commands(saved_commands, *number_executed_commands);
     } else {
-        if (atoi(argvv[0][1]) >= 0 && atoi(argvv[0][1]) < MAX_STORED_COMMANDS && atoi(argvv[0][1]) < *number_executed_commands) {
+        if (atoi(argvv[0][1]) >= 0 && atoi(argvv[0][1]) < MAX_STORED_COMMANDS &&
+            atoi(argvv[0][1]) < *number_executed_commands) {
             printf("Running command %s\n", argvv[0][1]);
             saved_command_executor(saved_commands, atoi(argvv[0][1]), num_commands);
         } else {
@@ -453,6 +441,11 @@ int mytime(time_t start) {
 
 int myexit() {
     //TODO:
+    //saved_commands[]
+    //current_command[]
+    //argvv
+    //filev
+    //
     return 0;
 }
 
@@ -484,6 +477,16 @@ int main(void) {
         saved_commands[i]->filev[2] = NULL;
     }
 
+    struct command *current_command;
+    current_command = malloc(sizeof(struct command));
+    current_command->args = malloc(sizeof(char));
+    current_command->argvv = malloc(sizeof(char));
+    *current_command->argvv = malloc(sizeof(char *));
+    **current_command->argvv = malloc(sizeof(char **));
+    current_command->filev[0] = NULL;
+    current_command->filev[1] = NULL;
+    current_command->filev[2] = NULL;
+
     while (1) {
         fprintf(stderr, "%s", "msh> ");    /* Prompt */
         ret = obtain_order(&argvv, filev, &bg);
@@ -497,15 +500,6 @@ int main(void) {
  * THE FOLLOWING LINES ONLY GIVE AN IDEA OF HOW TO USE THE STRUCTURES
  * argvv AND filev. THESE LINES MUST BE REMOVED.
  */
-        struct command *current_command;
-        current_command = malloc(sizeof(struct command));
-        current_command->args = malloc(sizeof(char));
-        current_command->argvv = malloc(sizeof(char));
-        *current_command->argvv = malloc(sizeof(char *));
-        **current_command->argvv = malloc(sizeof(char **));
-        current_command->filev[0] = NULL;
-        current_command->filev[1] = NULL;
-        current_command->filev[2] = NULL;
 
         if (strcmp(argvv[0][0], "mytime") == 0) {
             mytime(start_t);

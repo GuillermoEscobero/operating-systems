@@ -351,6 +351,31 @@ int piped_command_executor(char ***argvv, char **filev, int num_commands, int bg
         return 0;
 }
 
+int mycd(char *path) {
+    /* If no path is provided, get the HOME path */
+    if (path == NULL) {
+      if (chdir(getenv("HOME")) < 0) {
+        perror("mycd error");
+        return -1;
+      }
+    } else { /* Path provided */
+      if (chdir(path) < 0) {
+        perror("mycd error");
+        return -1;
+      }
+    }
+
+    /* Get the absolute path of the changed directory */
+    char* final_dir = getcwd(NULL, 0);
+    if(final_dir == NULL) {
+        perror("mycd error");
+        return -1;
+    }
+
+    printf("%s\n", final_dir);
+    return 0;
+}
+
 int main(void) {
         char ***argvv;
         int command_counter;
@@ -377,62 +402,47 @@ int main(void) {
  * argvv AND filev. THESE LINES MUST BE REMOVED.
  */
 
-                if (is_redirected(filev)) {
-                        redirected_command_executor(argvv, filev);
-                }
-                if (num_commands == 1) {
-                        single_command_executor(argvv, bg);
-                } else {
-                        piped_command_executor(argvv, filev, num_commands, bg);
-                }
+        if(strcmp(argvv[0][0], "mycd") == 0) {
+            mycd(argvv[0][1]);
+            continue;
+        }
+
+        if (is_redirected(filev)) {
+            redirected_command_executor(argvv, filev);
+        }
+        if (num_commands == 1) {
+            single_command_executor(argvv, bg);
+        } else {
+            piped_command_executor(argvv, num_commands);
+        }
 
 
+        /*
+               for (command_counter = 0; command_counter < num_commands; command_counter++)
+               {
+                   *//* argvv: complete entry form the terminal ([0][0] = ls e.g.)*//*
+			for (args_counter = 0; (argvv[command_counter][args_counter] != NULL); args_counter++)
+			{
+				printf("%s ", argvv[command_counter][args_counter]);
+			}
+			printf("\n");
+		}
 
+		if (filev[0] != NULL) printf("< %s\n", filev[0]);*//* IN *//*
 
+		if (filev[1] != NULL) printf("> %s\n", filev[1]);*//* OUT *//*
 
+		if (filev[2] != NULL) printf(">& %s\n", filev[2]);*//* ERR *//*
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                /*
-                       for (command_counter = 0; command_counter < num_commands; command_counter++)
-                       {
-                 *//* argvv: complete entry form the terminal ([0][0] = ls e.g.)*//*
-                   for (args_counter = 0; (argvv[command_counter][args_counter] != NULL); args_counter++)
-                   {
-                   printf("%s ", argvv[command_counter][args_counter]);
-                   }
-                   printf("\n");
-                   }
-
-                   if (filev[0] != NULL) printf("< %s\n", filev[0]);*//* IN *//*
-
-                   if (filev[1] != NULL) printf("> %s\n", filev[1]);*//* OUT *//*
-
-                   if (filev[2] != NULL) printf(">& %s\n", filev[2]);*//* ERR *//*
-
-                   if (bg) printf("&\n");
-                 */
+		if (bg) printf("&\n");
+*/
 
 /*
  * END OF THE PART TO BE REMOVED
  */
 
-        } //fin while
+    } //fin while
 
-        return 0;
+    return 0;
 
 } //end main

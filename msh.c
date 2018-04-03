@@ -173,10 +173,13 @@ int restore_redirection(char **filev, int original_file_descriptor) {
 }
 
 int show_saved_commands(struct command **saved_commands, int number_executed_commands) {
-    for (int i = 0; i < number_executed_commands; ++i) {
+    int i;
+    for (i = 0; i < number_executed_commands; ++i) {
         printf("%d ", i);
-        for (int j = 0; j < saved_commands[i]->num_commands; ++j) {
-            for (int k = 0; k < saved_commands[i]->args[j]; ++k) {
+        int j;
+        for (j = 0; j < saved_commands[i]->num_commands; ++j) {
+            int k;
+            for (k = 0; k < saved_commands[i]->args[j]; ++k) {
                 printf("%s ", saved_commands[i]->argvv[j][k]);
             }
             if (is_redirected(saved_commands[i]->filev)) {
@@ -208,11 +211,13 @@ int show_saved_commands(struct command **saved_commands, int number_executed_com
         }
         printf("\n");
     }
+    return 0;
 }
 
 void reorder_stored_commands(struct command **saved_commands) {
     free_command(saved_commands[0]);
-    for (int i = 0; i < MAX_STORED_COMMANDS - 1; ++i) {
+    int i;
+    for (i = 0; i < MAX_STORED_COMMANDS - 1; ++i) {
         memcpy(saved_commands[i], saved_commands[i + 1], sizeof(struct command));
     }
 }
@@ -272,7 +277,8 @@ int single_command_executor(char ***argvv, int bg) {
 
 int piped_command_executor(char ***argvv, int num_commands) {
     printf("Piped command bru\n");
-    for (int i = 0; i < num_commands; ++i) {
+    int i;
+    for (i = 0; i < num_commands; ++i) {
 
     }
     return 0;
@@ -311,7 +317,8 @@ int main(void) {
     int ret;
     struct command **saved_commands;
     saved_commands = malloc(sizeof(struct command) * MAX_STORED_COMMANDS);
-    for (int i = 0; i < MAX_STORED_COMMANDS; ++i) {
+    int i;
+    for (i = 0; i < MAX_STORED_COMMANDS; ++i) {
         saved_commands[i] = malloc(sizeof(struct command));
         saved_commands[i]->args = malloc(sizeof(char));
         saved_commands[i]->argvv = malloc(sizeof(char));

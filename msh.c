@@ -101,46 +101,6 @@ int is_redirected(char **filev) {
         }
 }
 
-int single_command_executor(char ***argvv, int bg) {
-        int syscall_status;
-        int executed_command_status;
-        pid_t child_pid;
-        pid_t pid = fork();
-
-        switch (pid) {
-        case -1:
-                perror("Error creating the child");
-                return -1;
-        case 0:
-                printf("Child <%d>\n", getpid());
-                syscall_status = execvp(argvv[0][0], argvv[0]);
-                if (syscall_status < 0) {
-                        // The syscall exec() did not find the command required to execute
-                        perror("Error in the execution of the command");
-                        exit(syscall_status);
-                }
-                break;
-        default:
-                if (!bg) {
-                        /* Wait for the children created in the fork, not children from previous forks  */
-                        child_pid = waitpid(pid, &executed_command_status, 0);
-
-                        if (child_pid != pid) {
-                                perror("Error while waiting for the child");
-                                return -1;
-                        }
-
-                        /*if (executed_command_status != 0) {
-                            // The command exited with a number diferent from 0
-                            perror("Error while executing the command");
-                            return -1;
-                           }*/
-                        printf("Wait child <%d>\n", child_pid);
-                }
-                return 0;
-        }
-}
-
 int piped_command_executor(char ***argvv, char **filev, int num_commands, int bg) {
         /* Check requirement of maximum number of commands */
         if(num_commands > MAX_PIPED_COMMANDS) {
@@ -524,7 +484,7 @@ void saved_command_executor(struct command **saved_commands, int possition, int 
 
         }
     } else {
-        piped_command_executor(saved_commands[possition]->argvv, filev, num_commands, bg);
+        piped_command_executor(saved_commands[possition]->argvv, saved_commands[possition]->filev, num_commands, saved_commands[possition]->bg);
     }
 
 }

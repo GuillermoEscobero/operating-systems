@@ -146,6 +146,7 @@ int is_redirected(char **filev) {
 }
 
 int get_redirection_type(char **filev) {
+    //FIXME: cuando haces un malloc, el contenido no es null, sino /0
     if (filev[0] != NULL && filev[1] == NULL && filev[2] == NULL) {
         return INPUT_REDIRECTION;
     } else if (filev[1] != NULL && filev[0] == NULL && filev[2] == NULL) {
@@ -189,6 +190,7 @@ int file_redirector(char **filev) {
             break;
         default:
             // There is an error
+            //FIXME: cuando usp myhistory peta
             perror("Error while reading the redirection attribute");
             return -1;
     }
@@ -235,6 +237,7 @@ void show_saved_commands(struct command **saved_commands, int number_executed_co
             for (int k = 0; k < saved_commands[i]->args[j]; ++k) {
                 printf("%s ", saved_commands[i]->argvv[j][k]);
             }
+            //TODO: show redirections too
 
             if (saved_commands[i]->num_commands != 1 && saved_commands[i]->num_commands != j + 1) {
                 printf("| ");
@@ -248,7 +251,8 @@ void show_saved_commands(struct command **saved_commands, int number_executed_co
 }
 
 void reorder_stored_commands(struct command **saved_commands) {
-    //free_command(saved_commands[0]);
+    //TODO:
+    free_command(saved_commands[0]);
     for (int i = 0; i < MAX_STORED_COMMANDS - 1; ++i) {
         memcpy(saved_commands[i], saved_commands[i + 1], sizeof(struct command));
     }
@@ -294,13 +298,13 @@ int main(void) {
     saved_commands = malloc(sizeof(struct command) * MAX_STORED_COMMANDS);
     for (int i = 0; i < MAX_STORED_COMMANDS; ++i) {
         saved_commands[i] = malloc(sizeof(struct command));
-        saved_commands[i]->args = malloc(sizeof(char) * 40);
-        saved_commands[i]->argvv = malloc(sizeof(char) * 40);
-        *saved_commands[i]->argvv = malloc(sizeof(char) * 40);
-        **saved_commands[i]->argvv = malloc(sizeof(char) * 40);
-        saved_commands[i]->filev[0] = malloc(sizeof(char) * 40);
-        saved_commands[i]->filev[1] = malloc(sizeof(char) * 40);
-        saved_commands[i]->filev[2] = malloc(sizeof(char) * 40);
+        saved_commands[i]->args = malloc(sizeof(char));
+        saved_commands[i]->argvv = malloc(sizeof(char));
+        *saved_commands[i]->argvv = malloc(sizeof(char*));
+        **saved_commands[i]->argvv = malloc(sizeof(char**));
+        saved_commands[i]->filev[0] = NULL;
+        saved_commands[i]->filev[1] = NULL;
+        saved_commands[i]->filev[2] = NULL;
     }
     int number_executed_commands = 0;
 
@@ -322,13 +326,13 @@ int main(void) {
  */
         struct command *current_command;
         current_command = malloc(sizeof(struct command));
-        current_command->args = malloc(sizeof(char) * 40);
-        current_command->argvv = malloc(sizeof(char *) * 40);
-        *current_command->argvv = malloc(sizeof(char) * 40);
-        **current_command->argvv = malloc(sizeof(char) * 40);
-        current_command->filev[0] = malloc(sizeof(char) * 40);
-        current_command->filev[1] = malloc(sizeof(char) * 40);
-        current_command->filev[2] = malloc(sizeof(char) * 40);
+        current_command->args = malloc(sizeof(char));
+        current_command->argvv = malloc(sizeof(char));
+        *current_command->argvv = malloc(sizeof(char*));
+        **current_command->argvv = malloc(sizeof(char**));
+        current_command->filev[0] = NULL;
+        current_command->filev[1] = NULL;
+        current_command->filev[2] = NULL;
 
         if (num_commands == 1) {
             if (is_redirected(filev)) {
@@ -342,9 +346,11 @@ int main(void) {
                     show_saved_commands(saved_commands, number_executed_commands);
                 } else {
                     if (atoi(argvv[0][1]) >= 0 && atoi(argvv[0][1]) < MAX_STORED_COMMANDS) {
+                        //TODO: change command number
+                        printf("Running command <N>\n");
                         saved_command_executor(saved_commands, atoi(argvv[0][1]), num_commands);
                     } else {
-                        perror("Algo"); //TODO:
+                        printf("Error: command not found\n");
                         return -1;
                     }
                 }

@@ -242,6 +242,11 @@ int mytime(time_t start) {
 
     diff_t = difftime(now, start);
 
+    if(diff_t < 0) {
+      printf("mytime error: error calculating difference of time\n");
+      return -1;
+    }
+
     hours = diff_t / 3600;
     remainder = (long) diff_t % 3600;
     mins = remainder / 60;
@@ -459,23 +464,19 @@ int main(void) {
 
         if (strcmp(argvv[0][0], "mytime") == 0) {
             mytime(start_t);
-            continue;
-        }
+        } else
 
         if (strcmp(argvv[0][0], "mycd") == 0) {
             mycd(argvv[0][1]);
-            continue;
-        }
+        } else
 
         if (strcmp(argvv[0][0], "myhistory") == 0) {
             myhistory(argvv, saved_commands, &number_executed_commands, num_commands);
-            continue;
-        }
+        } else
 
         if (strcmp(argvv[0][0], "exit") == 0) {
             myexit();
-            continue;
-        }
+        } else
 
         command_executor(argvv, filev, num_commands, bg);
 

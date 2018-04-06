@@ -368,30 +368,6 @@ int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
                 }
 
                 /* Execution of the command */
-                // if (strcmp(argvv[0][0], "mytime") == 0) {
-                //     if(mytime(start_t) < 0) {
-                //       exit(-1);
-                //     }
-                // } else
-
-                if (strcmp(argvv[0][0], "mycd") == 0) {
-                    if(mycd(argvv[0][1]) < 0) {
-                      exit(-1);
-                    }
-                } else
-
-                // if (strcmp(argvv[0][0], "myhistory") == 0) {
-                //     if(myhistory(argvv, saved_commands, &number_executed_commands, num_commands) < 0) {
-                //       exit(-1);
-                //     }
-                // } else
-
-                if (strcmp(argvv[0][0], "exit") == 0) {
-                    if(myexit() < 0) {
-                      exit(-1);
-                    }
-                } else
-
                 if (execvp(argvv[i][0], argvv[i]) < 0) {
                     perror("Error while executing a command");
                     exit(-1);
@@ -480,6 +456,26 @@ int main(void) {
 
         store_command(argvv, filev, bg, current_command);
         store_struct_command(saved_commands, &number_executed_commands, *current_command);
+
+        if (strcmp(argvv[0][0], "mytime") == 0) {
+            mytime(start_t);
+            continue;
+        }
+
+        if (strcmp(argvv[0][0], "mycd") == 0) {
+            mycd(argvv[0][1]);
+            continue;
+        }
+
+        if (strcmp(argvv[0][0], "myhistory") == 0) {
+            myhistory(argvv, saved_commands, &number_executed_commands, num_commands);
+            continue;
+        }
+
+        if (strcmp(argvv[0][0], "exit") == 0) {
+            myexit();
+            continue;
+        }
 
         command_executor(argvv, filev, num_commands, bg);
 

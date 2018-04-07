@@ -101,53 +101,40 @@ int is_redirected(char **filev) {
     }
 }
 
-int show_saved_commands(struct command **saved_commands, int number_executed_commands) {
+int show_saved_commands(struct command *saved_commands, int number_executed_commands) {
     int i;
     int command_counter;
     int args_counter;
     for (i = 0; i < number_executed_commands; ++i) {
         printf("%d ", i);
-        for (command_counter = 0; command_counter < saved_commands[i]->num_commands; command_counter++) {
-            for (args_counter = 0; (saved_commands[i]->argvv[command_counter][args_counter] != NULL); args_counter++) {
-                printf("%s ", saved_commands[i]->argvv[command_counter][args_counter]);
+        for (command_counter = 0; command_counter < saved_commands[i].num_commands; command_counter++) {
+            for (args_counter = 0; (saved_commands[i].argvv[command_counter][args_counter] != NULL); args_counter++) {
+                printf("%s ", saved_commands[i].argvv[command_counter][args_counter]);
             }
-            if (command_counter != saved_commands[i]->num_commands - 1) {
+            if (command_counter != saved_commands[i].num_commands - 1) {
                 printf("| ");
             }
         }
 
-        if (saved_commands[i]->filev[0] != NULL) printf("< %s ", saved_commands[i]->filev[0]);/* IN */
+        if (saved_commands[i].filev[0] != NULL) printf("< %s ", saved_commands[i].filev[0]);/* IN */
 
-        if (saved_commands[i]->filev[1] != NULL) printf("> %s ", saved_commands[i]->filev[1]);/* OUT */
+        if (saved_commands[i].filev[1] != NULL) printf("> %s ", saved_commands[i].filev[1]);/* OUT */
 
-        if (saved_commands[i]->filev[2] != NULL) printf(">& %s ", saved_commands[i]->filev[2]);/* ERR */
+        if (saved_commands[i].filev[2] != NULL) printf(">& %s ", saved_commands[i].filev[2]);/* ERR */
 
-        if (saved_commands[i]->bg) printf("& ");
+        if (saved_commands[i].bg) printf("& ");
 
         printf("\n");
     }
     return 0;
 }
 
-void reorder_stored_commands(struct command **saved_commands) {
-    free_command(saved_commands[0]);
+void reorder_stored_commands(struct command *saved_commands) {
+    free_command(&saved_commands[0]);
     int i;
     for (i = 0; i < MAX_STORED_COMMANDS - 1; ++i) {
-        memcpy(saved_commands[i], saved_commands[i + 1], sizeof(struct command));
+        memcpy(&saved_commands[i], &saved_commands[i + 1], sizeof(struct command));
     }
-}
-
-void
-store_struct_command(struct command **saved_commands, int *number_executed_commands, struct command current_command) {
-    if (*number_executed_commands < MAX_STORED_COMMANDS) {
-        memcpy(saved_commands[*number_executed_commands], &current_command, sizeof(struct command));
-        *number_executed_commands = *number_executed_commands + 1;
-
-    } else {
-        reorder_stored_commands(saved_commands);
-        memcpy(saved_commands[MAX_STORED_COMMANDS - 1], &current_command, sizeof(struct command));
-    }
-
 }
 
 int single_command_executor(char ***argvv, char **filev, int bg) {
@@ -369,23 +356,23 @@ int piped_command_executor(char ***argvv, char **filev, int num_commands, int bg
     return 0;
 }
 
-void saved_command_executor(struct command **saved_commands, int selected_command, int num_commands) {
-    if (saved_commands[selected_command]->num_commands == 1) {
-        single_command_executor(saved_commands[selected_command]->argvv, saved_commands[selected_command]->filev,
-                                saved_commands[selected_command]->bg);
+void saved_command_executor(struct command *saved_commands, int selected_command, int num_commands) {
+    if (saved_commands[selected_command].num_commands == 1) {
+        single_command_executor(saved_commands[selected_command].argvv, saved_commands[selected_command].filev,
+                                saved_commands[selected_command].bg);
     } else {
-        piped_command_executor(saved_commands[selected_command]->argvv, saved_commands[selected_command]->filev,
+        piped_command_executor(saved_commands[selected_command].argvv, saved_commands[selected_command].filev,
                                num_commands,
-                               saved_commands[selected_command]->bg);
+                               saved_commands[selected_command].bg);
     }
 }
 
-int myhistory(char ***argvv, struct command **saved_commands, int *number_executed_commands, int num_commands) {
+int myhistory(char ***argvv, struct command *saved_commands, const int number_executed_commands, int num_commands) {
     if (argvv[0][1] == NULL) {
-        show_saved_commands(saved_commands, *number_executed_commands);
+        show_saved_commands(saved_commands, number_executed_commands);
     } else {
         if (atoi(argvv[0][1]) >= 0 && atoi(argvv[0][1]) < MAX_STORED_COMMANDS &&
-            atoi(argvv[0][1]) < *number_executed_commands) {
+            atoi(argvv[0][1]) < number_executed_commands) {
             printf("Running command %s\n", argvv[0][1]);
             saved_command_executor(saved_commands, atoi(argvv[0][1]), num_commands);
         } else {
@@ -463,29 +450,8 @@ int main(void) {
     time(&start_t);
 
     int number_executed_commands = 0;
-    struct command **saved_commands;
-    saved_commands = malloc(sizeof(struct command) * MAX_STORED_COMMANDS);
-    int i;
-    for (i = 0; i < MAX_STORED_COMMANDS; ++i) {
-        saved_commands[i] = malloc(sizeof(struct command));
-        saved_commands[i]->args = malloc(sizeof(char));
-        saved_commands[i]->argvv = malloc(sizeof(char));
-        *saved_commands[i]->argvv = malloc(sizeof(char *));
-        **saved_commands[i]->argvv = malloc(sizeof(char **));
-        saved_commands[i]->filev[0] = NULL;
-        saved_commands[i]->filev[1] = NULL;
-        saved_commands[i]->filev[2] = NULL;
-    }
-
-    struct command *current_command;
-    current_command = malloc(sizeof(struct command));
-    current_command->args = malloc(sizeof(char));
-    current_command->argvv = malloc(sizeof(char));
-    *current_command->argvv = malloc(sizeof(char *));
-    **current_command->argvv = malloc(sizeof(char **));
-    current_command->filev[0] = NULL;
-    current_command->filev[1] = NULL;
-    current_command->filev[2] = NULL;
+    struct command *saved_commands;
+    saved_commands = calloc( MAX_STORED_COMMANDS, sizeof(struct command));
 
     while (1) {
         fprintf(stderr, "%s", "msh> ");    /* Prompt */
@@ -512,7 +478,7 @@ int main(void) {
         }
 
         if (strcmp(argvv[0][0], "myhistory") == 0) {
-            myhistory(argvv, saved_commands, &number_executed_commands, num_commands);
+            myhistory(argvv, saved_commands, number_executed_commands, num_commands);
             continue;
         }
 
@@ -521,8 +487,14 @@ int main(void) {
             continue;
         }
 
-        store_command(argvv, filev, bg, current_command);
-        store_struct_command(saved_commands, &number_executed_commands, *current_command);
+        if (number_executed_commands < MAX_STORED_COMMANDS) {
+            store_command(argvv, filev, bg, &saved_commands[number_executed_commands]);
+            number_executed_commands = number_executed_commands + 1;
+
+        } else {
+            reorder_stored_commands(saved_commands);
+            store_command(argvv, filev, bg, &saved_commands[MAX_STORED_COMMANDS - 1]);
+        }
 
         if (num_commands == 1) {
             single_command_executor(argvv, filev, bg);

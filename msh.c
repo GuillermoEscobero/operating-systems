@@ -426,14 +426,30 @@ int mytime(time_t start) {
     return 0;
 }
 
-int myexit() {
-    //TODO:
-    //saved_commands[]
-    //current_command[]
-    //argvv
-    //filev
-    //
-    return 0;
+int myexit(char ***argvv, struct command *saved_commands, char **filev, int number_executed_commands) {
+    printf("Goodbye!");
+    int i;
+    for (i = 0; i < number_executed_commands; i++) {
+        free_command(&saved_commands[i]);
+    }
+    if (argvv != NULL) {
+        char **argv;
+        for (; argvv && *argvv; argvv++) {
+            for (argv = *argvv; argv && *argv; argv++) {
+                if (*argv) {
+                    free(*argv);
+                    *argv = NULL;
+                }
+            }
+        }
+    }
+    int f;
+    for (f = 0; f < 3; f++) {
+        free(filev[f]);
+        filev[f] = NULL;
+    }
+    exit(0);
+
 }
 
 int main(void) {
@@ -451,7 +467,7 @@ int main(void) {
 
     int number_executed_commands = 0;
     struct command *saved_commands;
-    saved_commands = calloc( MAX_STORED_COMMANDS, sizeof(struct command));
+    saved_commands = calloc(MAX_STORED_COMMANDS, sizeof(struct command));
 
     while (1) {
         fprintf(stderr, "%s", "msh> ");    /* Prompt */
@@ -483,7 +499,7 @@ int main(void) {
         }
 
         if (strcmp(argvv[0][0], "exit") == 0) {
-            myexit();
+            myexit(argvv, saved_commands, filev, number_executed_commands);
             continue;
         }
 

@@ -426,30 +426,33 @@ int mytime(time_t start) {
     return 0;
 }
 
-int myexit(char ***argvv, struct command *saved_commands, char **filev, int number_executed_commands) {
+int myexit(char ****argvv, struct command *saved_commands, char **filev, int number_executed_commands) {
     printf("Goodbye!");
-    int i;
-    for (i = 0; i < number_executed_commands; i++) {
-        free_command(&saved_commands[i]);
+    if (saved_commands != NULL) {
+        int i;
+        for (i = 0; i < number_executed_commands; i++) {
+            free_command(&saved_commands[i]);
+        }
+        free(saved_commands);
     }
     if (argvv != NULL) {
         char **argv;
-        for (; argvv && *argvv; argvv++) {
-            for (argv = *argvv; argv && *argv; argv++) {
+        for (; *argvv && **argvv; *argvv = *argvv + 1) {
+            for (argv = **argvv; argv && *argv; argv++) {
                 if (*argv) {
                     free(*argv);
                     *argv = NULL;
                 }
             }
         }
+        *argvv = NULL;
     }
     int f;
     for (f = 0; f < 3; f++) {
         free(filev[f]);
         filev[f] = NULL;
     }
-    exit(0);
-
+    return 0;
 }
 
 int main(void) {
@@ -499,8 +502,7 @@ int main(void) {
         }
 
         if (strcmp(argvv[0][0], "exit") == 0) {
-            myexit(argvv, saved_commands, filev, number_executed_commands);
-            continue;
+            exit(myexit(&argvv, saved_commands, filev, number_executed_commands));
         }
 
         if (number_executed_commands < MAX_STORED_COMMANDS) {

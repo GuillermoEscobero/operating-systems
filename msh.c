@@ -137,82 +137,91 @@ void reorder_stored_commands(struct command *saved_commands) {
     }
 }
 
-int single_command_executor(char ***argvv, char **filev, int bg) {
-    int syscall_status;
-    int executed_command_status;
-    pid_t child_pid;
-    pid_t pid = fork();
-    switch (pid) {
-        case -1:
-            perror("Error creating the child");
-            return -1;
-        case 0:
-            printf("Child %d\n", getpid());
-            if (is_redirected(filev)) {
-                if (filev[INPUT_REDIRECTION] != NULL) {
-                    if (close(STDIN_FILENO) < 0) {
-                        perror("Error closing standard input");
-                        return -1;
-                    }
-                    if (open(filev[INPUT_REDIRECTION], O_RDONLY) < 0) {
-                        perror("Error opening file for input redirection");
-                        return -1;
-                    }
-                }
-                /* Redirection of standard output of last command to file (if required) */
-                if (filev[OUTPUT_REDIRECTION] != NULL) {
-                    if (close(STDOUT_FILENO) < 0) {
-                        perror("Error closing standard output");
-                        return -1;
-                    }
-                    if (open(filev[OUTPUT_REDIRECTION], O_CREAT | O_TRUNC | O_WRONLY, 0666) < 0) {
-                        perror("Error opening file for output redirection");
-                        return -1;
-                    }
-                }
-
-                /* Redirection of standard error output to file (if required) */
-                if (filev[ERROR_REDIRECTION] != NULL) {
-                    if (close(STDERR_FILENO) < 0) {
-                        perror("Error closing standard error output");
-                        return -1;
-                    }
-                    if (open(filev[ERROR_REDIRECTION], O_CREAT | O_TRUNC | O_WRONLY, 0666) < 0) {
-                        perror("Error opening file for error output redirection");
-                        return -1;
-                    }
-                }
-            }
-            syscall_status = execvp(argvv[0][0], argvv[0]);
-            if (syscall_status < 0) {
-                // The syscall exec() did not find the command required to execute
-                perror("Error in the execution of the command");
-                exit(syscall_status);
-            }
-            break;
-        default:
-            if (!bg) {
-                /* Wait for the children created in the fork, not children from previous forks  */
-                child_pid = waitpid(pid, &executed_command_status, 0);
-
-                if (child_pid != pid) {
-                    perror("Error while waiting for the child");
-                    return -1;
-                }
-
-                //if (executed_command_status != 0) {
-                //    // The command exited with a number diferent from 0
-                //    perror("Error while executing the command");
-                //    return -1;
-                //}
-                printf("Wait child %d\n", child_pid);
-            }
-    }
-    return 0;
-
+void saved_command_executor(struct command **saved_commands, int selected_command, int num_commands) {
+    // if (saved_commands[selected_command]->num_commands == 1) {
+    //     single_command_executor(saved_commands[selected_command]->argvv, saved_commands[selected_command]->filev,
+    //                             saved_commands[selected_command]->bg);
+    // } else {
+        command_executor(saved_commands[selected_command]->argvv, saved_commands[selected_command]->filev,
+                               num_commands,
+                               saved_commands[selected_command]->bg);
+    // }
 }
 
-int piped_command_executor(char ***argvv, char **filev, int num_commands, int bg) {
+int myhistory(char ***argvv, struct command **saved_commands, int *number_executed_commands, int num_commands) {
+    if (argvv[0][1] == NULL) {
+        show_saved_commands(saved_commands, *number_executed_commands);
+    } else {
+        //FIXME: si aun no esta lleno esto no da error
+        if (atoi(argvv[0][1]) >= 0 && atoi(argvv[0][1]) < MAX_STORED_COMMANDS) {
+            printf("Running command %s\n", argvv[0][1]);
+            saved_command_executor(saved_commands, atoi(argvv[0][1]), num_commands);
+        } else {
+            printf("Error: command not found\n");
+            return -1;
+        }
+    }
+    return 0;
+}
+
+int mycd(char *path) {
+    /* If no path is provided, get the HOME path */
+    if (path == NULL) {
+        if (chdir(getenv("HOME")) < 0) {
+            perror("mycd error");
+            return -1;
+        }
+    } else { /* Path provided */
+        if (chdir(path) < 0) {
+            perror("mycd error");
+            return -1;
+        }
+    }
+
+    /* Get the absolute path of the changed directory */
+    char *final_dir = getcwd(NULL, 0);
+    if (final_dir == NULL) {
+        perror("mycd error");
+        return -1;
+    }
+
+    printf("%s\n", final_dir);
+    return 0;
+}
+
+int mytime(time_t start) {
+    time_t now;
+    double diff_t;
+    int hours, mins, secs, remainder;
+
+    if(time(&now) < 0) {
+      perror("mytime error");
+      return -1;
+    }
+
+    diff_t = difftime(now, start);
+
+    if(diff_t < 0) {
+      printf("mytime error: error calculating difference of time\n");
+      return -1;
+    }
+
+    hours = diff_t / 3600;
+    remainder = (long) diff_t % 3600;
+    mins = remainder / 60;
+    secs = remainder % 60;
+
+    printf("Uptime: %d h. %d min. %d s.\n", hours, mins, secs);
+
+    return 0;
+}
+
+int myexit() {
+    //TODO:
+    return 0;
+}
+
+int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
     /* Check requirement of maximum number of commands */
     if (num_commands > MAX_PIPED_COMMANDS) {
         printf("Error: number of commands exceeded\n");
@@ -465,8 +474,8 @@ int main(void) {
     setbuf(stdout, NULL);            /* Unbuffered */
     setbuf(stdin, NULL);
 
-    time_t start_t;
-    time(&start_t);
+    time_t start_t;                  /* Initial time */
+    time(&start_t);                  /* Store initial time */
 
     int number_executed_commands = 0;
     struct command *saved_commands;
@@ -486,40 +495,26 @@ int main(void) {
  * argvv AND filev. THESE LINES MUST BE REMOVED.
  */
 
+        store_command(argvv, filev, bg, current_command);
+        store_struct_command(saved_commands, &number_executed_commands, *current_command);
+
         if (strcmp(argvv[0][0], "mytime") == 0) {
             mytime(start_t);
-            continue;
-        }
+        } else
 
         if (strcmp(argvv[0][0], "mycd") == 0) {
             mycd(argvv[0][1]);
-            continue;
-        }
+        } else
 
         if (strcmp(argvv[0][0], "myhistory") == 0) {
-            myhistory(argvv, saved_commands, number_executed_commands, num_commands);
-            continue;
-        }
+            myhistory(argvv, saved_commands, &number_executed_commands, num_commands);
+        } else
 
         if (strcmp(argvv[0][0], "exit") == 0) {
-            exit(myexit(&argvv, saved_commands, filev, number_executed_commands));
-        }
+            myexit();
+        } else
 
-        if (number_executed_commands < MAX_STORED_COMMANDS) {
-            store_command(argvv, filev, bg, &saved_commands[number_executed_commands]);
-            number_executed_commands = number_executed_commands + 1;
-
-        } else {
-            reorder_stored_commands(saved_commands);
-            store_command(argvv, filev, bg, &saved_commands[MAX_STORED_COMMANDS - 1]);
-        }
-
-        if (num_commands == 1) {
-            single_command_executor(argvv, filev, bg);
-
-        } else {
-            piped_command_executor(argvv, filev, num_commands, bg);
-        }
+        command_executor(argvv, filev, num_commands, bg);
 
     } //fin while
 

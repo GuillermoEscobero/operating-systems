@@ -18,9 +18,6 @@
 #include <sys/wait.h>
 #include <time.h>
 
-#define INPUT_REDIRECTION 0
-#define OUTPUT_REDIRECTION 1
-#define ERROR_REDIRECTION 2
 #define MAX_STORED_COMMANDS 20
 #define MAX_PIPED_COMMANDS 3
 
@@ -91,134 +88,6 @@ void store_command(char ***argvv, char *filev[3], int bg, struct command *cmd) {
             strcpy((*cmd).argvv[i][j], argvv[i][j]);
         }
     }
-}
-
-int is_redirected(char **filev) {
-    if (filev[0] != NULL || filev[1] != NULL || filev[2] != NULL) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
-int show_saved_commands(struct command *saved_commands, int number_executed_commands) {
-    int i;
-    int command_counter;
-    int args_counter;
-    for (i = 0; i < number_executed_commands; ++i) {
-        printf("%d ", i);
-        for (command_counter = 0; command_counter < saved_commands[i].num_commands; command_counter++) {
-            for (args_counter = 0; (saved_commands[i].argvv[command_counter][args_counter] != NULL); args_counter++) {
-                printf("%s ", saved_commands[i].argvv[command_counter][args_counter]);
-            }
-            if (command_counter != saved_commands[i].num_commands - 1) {
-                printf("| ");
-            }
-        }
-
-        if (saved_commands[i].filev[0] != NULL) printf("< %s ", saved_commands[i].filev[0]);/* IN */
-
-        if (saved_commands[i].filev[1] != NULL) printf("> %s ", saved_commands[i].filev[1]);/* OUT */
-
-        if (saved_commands[i].filev[2] != NULL) printf(">& %s ", saved_commands[i].filev[2]);/* ERR */
-
-        if (saved_commands[i].bg) printf("& ");
-
-        printf("\n");
-    }
-    return 0;
-}
-
-void reorder_stored_commands(struct command *saved_commands) {
-    free_command(&saved_commands[0]);
-    int i;
-    for (i = 0; i < MAX_STORED_COMMANDS - 1; ++i) {
-        memcpy(&saved_commands[i], &saved_commands[i + 1], sizeof(struct command));
-    }
-}
-
-void saved_command_executor(struct command **saved_commands, int selected_command, int num_commands) {
-    // if (saved_commands[selected_command]->num_commands == 1) {
-    //     single_command_executor(saved_commands[selected_command]->argvv, saved_commands[selected_command]->filev,
-    //                             saved_commands[selected_command]->bg);
-    // } else {
-        command_executor(saved_commands[selected_command]->argvv, saved_commands[selected_command]->filev,
-                               num_commands,
-                               saved_commands[selected_command]->bg);
-    // }
-}
-
-int myhistory(char ***argvv, struct command **saved_commands, int *number_executed_commands, int num_commands) {
-    if (argvv[0][1] == NULL) {
-        show_saved_commands(saved_commands, *number_executed_commands);
-    } else {
-        //FIXME: si aun no esta lleno esto no da error
-        if (atoi(argvv[0][1]) >= 0 && atoi(argvv[0][1]) < MAX_STORED_COMMANDS) {
-            printf("Running command %s\n", argvv[0][1]);
-            saved_command_executor(saved_commands, atoi(argvv[0][1]), num_commands);
-        } else {
-            printf("Error: command not found\n");
-            return -1;
-        }
-    }
-    return 0;
-}
-
-int mycd(char *path) {
-    /* If no path is provided, get the HOME path */
-    if (path == NULL) {
-        if (chdir(getenv("HOME")) < 0) {
-            perror("mycd error");
-            return -1;
-        }
-    } else { /* Path provided */
-        if (chdir(path) < 0) {
-            perror("mycd error");
-            return -1;
-        }
-    }
-
-    /* Get the absolute path of the changed directory */
-    char *final_dir = getcwd(NULL, 0);
-    if (final_dir == NULL) {
-        perror("mycd error");
-        return -1;
-    }
-
-    printf("%s\n", final_dir);
-    return 0;
-}
-
-int mytime(time_t start) {
-    time_t now;
-    double diff_t;
-    int hours, mins, secs, remainder;
-
-    if(time(&now) < 0) {
-      perror("mytime error");
-      return -1;
-    }
-
-    diff_t = difftime(now, start);
-
-    if(diff_t < 0) {
-      printf("mytime error: error calculating difference of time\n");
-      return -1;
-    }
-
-    hours = diff_t / 3600;
-    remainder = (long) diff_t % 3600;
-    mins = remainder / 60;
-    secs = remainder % 60;
-
-    printf("Uptime: %d h. %d min. %d s.\n", hours, mins, secs);
-
-    return 0;
-}
-
-int myexit() {
-    //TODO:
-    return 0;
 }
 
 int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
@@ -365,25 +234,60 @@ int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
     return 0;
 }
 
-void saved_command_executor(struct command *saved_commands, int selected_command, int num_commands) {
-    if (saved_commands[selected_command].num_commands == 1) {
-        single_command_executor(saved_commands[selected_command].argvv, saved_commands[selected_command].filev,
-                                saved_commands[selected_command].bg);
-    } else {
-        piped_command_executor(saved_commands[selected_command].argvv, saved_commands[selected_command].filev,
-                               num_commands,
-                               saved_commands[selected_command].bg);
+int show_saved_commands(struct command *saved_commands, int number_executed_commands) {
+    int i;
+    int command_counter;
+    int args_counter;
+    // Iterate through the array of saved_commands to print all arguments and commands, as in the initial code given
+    for (i = 0; i < number_executed_commands; ++i) {
+        printf("%d ", i);
+        for (command_counter = 0; command_counter < saved_commands[i].num_commands; command_counter++) {
+            for (args_counter = 0; (saved_commands[i].argvv[command_counter][args_counter] != NULL); args_counter++) {
+                printf("%s ", saved_commands[i].argvv[command_counter][args_counter]);
+            }
+            if (command_counter != saved_commands[i].num_commands - 1) {
+                printf("| ");
+            }
+        }
+
+        if (saved_commands[i].filev[0] != NULL) printf("< %s ", saved_commands[i].filev[0]);/* IN */
+
+        if (saved_commands[i].filev[1] != NULL) printf("> %s ", saved_commands[i].filev[1]);/* OUT */
+
+        if (saved_commands[i].filev[2] != NULL) printf(">& %s ", saved_commands[i].filev[2]);/* ERR */
+
+        if (saved_commands[i].bg) printf("& ");
+
+        printf("\n");
+    }
+    return 0;
+}
+
+void reorder_stored_commands(struct command *saved_commands) {
+    // Free the first command stored
+    free_command(&saved_commands[0]);
+    int i;
+    // Move the others one place to make room for the new command to be stored
+    for (i = 0; i < MAX_STORED_COMMANDS - 1; ++i) {
+        memcpy(&saved_commands[i], &saved_commands[i + 1], sizeof(struct command));
     }
 }
 
 int myhistory(char ***argvv, struct command *saved_commands, const int number_executed_commands, int num_commands) {
+    // If the command is executed with no arguments, show the stored ones
     if (argvv[0][1] == NULL) {
         show_saved_commands(saved_commands, number_executed_commands);
     } else {
-        if (atoi(argvv[0][1]) >= 0 && atoi(argvv[0][1]) < MAX_STORED_COMMANDS &&
-            atoi(argvv[0][1]) < number_executed_commands) {
+        // Get the number set as argument of the command
+        int selected_command = (int) strtol(argvv[0][1], NULL, 10);
+        // If the number is between 0 and the number of commands executed, run that command
+        if (selected_command >= 0 && selected_command < number_executed_commands) {
             printf("Running command %s\n", argvv[0][1]);
-            saved_command_executor(saved_commands, atoi(argvv[0][1]), num_commands);
+            command_executor(saved_commands[selected_command].argvv,
+                             saved_commands[selected_command].filev,
+                             num_commands,
+                             saved_commands[selected_command].bg);
+
         } else {
             printf("Error: command not found\n");
             return -1;
@@ -422,11 +326,20 @@ int mytime(time_t start) {
     double diff_t;
     int hours, mins, secs, remainder;
 
-    time(&now);
+    if (time(&now) < 0) {
+        perror("mytime error");
+        return -1;
+    }
+
     diff_t = difftime(now, start);
 
-    hours = diff_t / 3600;
-    remainder = (long) diff_t % 3600;
+    if (diff_t < 0) {
+        printf("mytime error: error calculating difference of time\n");
+        return -1;
+    }
+
+    hours = (int) diff_t / 3600;
+    remainder = (int) diff_t % 3600;
     mins = remainder / 60;
     secs = remainder % 60;
 
@@ -437,27 +350,36 @@ int mytime(time_t start) {
 
 int myexit(char ****argvv, struct command *saved_commands, char **filev, int number_executed_commands) {
     printf("Goodbye!");
+    // Following the structure in free_command(), check if there's been a command stored
     if (saved_commands != NULL) {
         int i;
+        // Iterate through the saved commands and free each one of them
         for (i = 0; i < number_executed_commands; i++) {
             free_command(&saved_commands[i]);
         }
+        // Free the array storing structs
         free(saved_commands);
     }
+    // If the argvv array of the current command being executed exists, free it
     if (argvv != NULL) {
         char **argv;
+        // Iterate through the commands
         for (; *argvv && **argvv; *argvv = *argvv + 1) {
+            // Iterate through the arguments of the command
             for (argv = **argvv; argv && *argv; argv++) {
+                // If it exists, free it and set to NULL the reference to the argument
                 if (*argv) {
                     free(*argv);
                     *argv = NULL;
                 }
             }
         }
+        // Delete the reference to the command
         *argvv = NULL;
     }
     int f;
     for (f = 0; f < 3; f++) {
+        // Free the array of redirections and set the reference to null
         free(filev[f]);
         filev[f] = NULL;
     }
@@ -495,26 +417,29 @@ int main(void) {
  * argvv AND filev. THESE LINES MUST BE REMOVED.
  */
 
-        store_command(argvv, filev, bg, current_command);
-        store_struct_command(saved_commands, &number_executed_commands, *current_command);
-
         if (strcmp(argvv[0][0], "mytime") == 0) {
             mytime(start_t);
-        } else
-
-        if (strcmp(argvv[0][0], "mycd") == 0) {
+        } else if (strcmp(argvv[0][0], "mycd") == 0) {
             mycd(argvv[0][1]);
-        } else
-
-        if (strcmp(argvv[0][0], "myhistory") == 0) {
-            myhistory(argvv, saved_commands, &number_executed_commands, num_commands);
-        } else
-
-        if (strcmp(argvv[0][0], "exit") == 0) {
-            myexit();
-        } else
-
-        command_executor(argvv, filev, num_commands, bg);
+        } else if (strcmp(argvv[0][0], "myhistory") == 0) {
+            myhistory(argvv, saved_commands, number_executed_commands, num_commands);
+        } else if (strcmp(argvv[0][0], "exit") == 0) {
+            exit(myexit(&argvv, saved_commands, filev, number_executed_commands));
+        } else {
+            if (number_executed_commands < MAX_STORED_COMMANDS) {
+                // If the number of executed commands is below the maximum established,
+                // the array is not full and doesn't need reordering
+                store_command(argvv, filev, bg, &saved_commands[number_executed_commands]);
+                number_executed_commands = number_executed_commands + 1;
+            } else {
+                // If the number of executed commands has been reached, the array must be reordered
+                reorder_stored_commands(saved_commands);
+                // Store the command into the last position
+                store_command(argvv, filev, bg, &saved_commands[MAX_STORED_COMMANDS - 1]);
+            }
+            // Execute the command
+            command_executor(argvv, filev, num_commands, bg);
+        }
 
     } //fin while
 

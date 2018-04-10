@@ -420,9 +420,7 @@ int main(void) {
         if (num_commands == 0) continue;    /* Empty line */
 
 /*
- * THE PART THAT MUST BE REMOVED STARTS HERE
- * THE FOLLOWING LINES ONLY GIVE AN IDEA OF HOW TO USE THE STRUCTURES
- * argvv AND filev. THESE LINES MUST BE REMOVED.
+ * CODE ADDED BEYOND THIS POINT
  */
 
         if (strcmp(argvv[0][0], "mytime") == 0) {

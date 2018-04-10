@@ -231,7 +231,9 @@ int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
                     }
                     printf("Wait child %d\n", child_pid);
                 } else {
+                  if(i == (num_commands-1)) { /* Print the last PID */
                     printf("[%d]\n", pid);
+                  }
                 }
         }
     }
@@ -433,7 +435,7 @@ int main(void) {
             if (myexit(&argvv, saved_commands, filev, number_executed_commands) == 0) {
                 exit(EXIT_SUCCESS);
             } else {
-                perror("failed while freeing resources of msh");
+                printf("ERROR: failed while freeing resources of msh");
                 exit(EXIT_FAILURE);
             }
         } else {

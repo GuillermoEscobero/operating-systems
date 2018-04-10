@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <signal.h>
 
 #define MAX_STORED_COMMANDS 20
 #define MAX_PIPED_COMMANDS 3
@@ -90,6 +91,26 @@ void store_command(char ***argvv, char *filev[3], int bg, struct command *cmd) {
     }
 }
 
+void signal_handler(int signum) {
+    pid_t child_pid;
+    int exit_status;/* Exit code of child */
+
+    while (1) {
+        // Wait for all child processes (-1) without blocking the execution
+        child_pid = waitpid(-1, &exit_status, WNOHANG);
+        switch (child_pid){
+            case -1:
+                // There are no more child processes to wait (child_pid == -1)
+                return;
+            case 0:
+                // I'm the child (child_pid == 0), do nothing
+                return;
+            default:
+                printf("Wait child %d\n", child_pid);
+        }
+    }
+}
+
 int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
     /* Check requirement of maximum number of commands */
     if (num_commands > MAX_PIPED_COMMANDS) {
@@ -98,9 +119,8 @@ int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
     }
 
     int p[num_commands - 1][2]; /* Need N-1 pipes for N commands */
-    pid_t pid, child_pid;     /* Parent and children pids */
+    pid_t pid;                /* Parent pid */
     int i;                    /* Loop iterator */
-    int status;               /* Exit code of child */
 
     /* Loop for each command */
     for (i = 0; i < num_commands; i++) {
@@ -113,9 +133,11 @@ int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
             }
         }
 
+        /* Setup function to handle the signal sent by the child process to its father when it ends */
+        signal(SIGCHLD, signal_handler);
+
         /* Child creation */
         pid = fork();
-
         switch (pid) {
             case -1:
                 perror("Error creating the child");
@@ -222,11 +244,7 @@ int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
                     }
                 }
 
-                /* If not executed in background, wait for children */
-                if (bg == 0) {
-                    child_pid = wait(&status);
-                    printf("Wait child %d\n", child_pid);
-                } else {
+                if (bg == 1) {
                     printf("[%d]\n", pid);
                 }
         }
@@ -277,7 +295,7 @@ int myhistory(char ***argvv, struct command *saved_commands, const int number_ex
     // If the command is executed with no arguments, show the stored ones
     if (argvv[0][1] == NULL) {
         show_saved_commands(saved_commands, number_executed_commands);
-    } else if (argvv[0][2] == NULL){
+    } else if (argvv[0][2] == NULL) {
         // Get the number set as argument of the command
         int selected_command = (int) strtol(argvv[0][1], NULL, 10);
         // If the number is between 0 and the number of commands executed, run that command
@@ -293,8 +311,7 @@ int myhistory(char ***argvv, struct command *saved_commands, const int number_ex
             printf("Error: command not found\n");
             return -1;
         }
-    }
-    else {
+    } else {
         printf("Error: number of arguments exceeded\n");
         return -2;
     }
@@ -421,6 +438,7 @@ int main(void) {
  * THE FOLLOWING LINES ONLY GIVE AN IDEA OF HOW TO USE THE STRUCTURES
  * argvv AND filev. THESE LINES MUST BE REMOVED.
  */
+        //while (waitpid(-1, NULL, WNOHANG) != -1);
 
         if (strcmp(argvv[0][0], "mytime") == 0) {
             mytime(start_t);
@@ -429,10 +447,9 @@ int main(void) {
         } else if (strcmp(argvv[0][0], "myhistory") == 0) {
             myhistory(argvv, saved_commands, number_executed_commands, num_commands);
         } else if (strcmp(argvv[0][0], "exit") == 0) {
-            if (myexit(&argvv, saved_commands, filev, number_executed_commands) == 0){
+            if (myexit(&argvv, saved_commands, filev, number_executed_commands) == 0) {
                 exit(EXIT_SUCCESS);
-            }
-            else {
+            } else {
                 perror("failed while freeing resources of msh");
                 exit(EXIT_FAILURE);
             }

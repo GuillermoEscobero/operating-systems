@@ -119,8 +119,8 @@ int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
     }
 
     int p[num_commands - 1][2]; /* Need N-1 pipes for N commands */
-    pid_t pid;                /* Parent pid */
-    int i;                    /* Loop iterator */
+    pid_t pid, child_pid;       /* Parent pid */
+    int i;                      /* Loop iterator */
 
     /* Loop for each command */
     for (i = 0; i < num_commands; i++) {
@@ -133,8 +133,10 @@ int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
             }
         }
 
-        /* Setup function to handle the signal sent by the child process to its father when it ends */
-        signal(SIGCHLD, signal_handler);
+        // if (bg == 1) {
+        //   /* Setup function to handle the signal sent by the child process to its father when it ends */
+        //   signal(SIGCHLD, signal_handler);
+        // }
 
         /* Child creation */
         pid = fork();
@@ -246,6 +248,9 @@ int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
 
                 if (bg == 1) {
                     printf("[%d]\n", pid);
+                } else {
+                    child_pid = wait(NULL);
+                    printf("Wait child %d\n", child_pid);
                 }
         }
     }
@@ -467,6 +472,25 @@ int main(void) {
             }
             // Execute the command
             command_executor(argvv, filev, num_commands, bg);
+        }
+
+        int exit_status;/* Exit code of child */
+        int flag = 0;
+        while (flag == 0) {
+            // Wait for all child processes (-1) without blocking the execution
+            pid_t child_pid = waitpid(-1, &exit_status, WNOHANG);
+            switch (child_pid){
+                case -1:
+                    // There are no more child processes to wait (child_pid == -1)
+                    flag = 1;
+                    break;
+                case 0:
+                    // I'm the child (child_pid == 0), do nothing
+                    flag = 1;
+                    break;
+                default:
+                    printf("Wait child %d\n", child_pid);
+            }
         }
 
     } //fin while

@@ -277,10 +277,11 @@ int myhistory(char ***argvv, struct command *saved_commands, const int number_ex
     // If the command is executed with no arguments, show the stored ones
     if (argvv[0][1] == NULL) {
         show_saved_commands(saved_commands, number_executed_commands);
-    } else {
+    } else if (argvv[0][2] == NULL){
         // Get the number set as argument of the command
         int selected_command = (int) strtol(argvv[0][1], NULL, 10);
         // If the number is between 0 and the number of commands executed, run that command
+        // NOTE: the number_executed_commands variable stops increasing after reaching MAX_STORED_COMMANDS value
         if (selected_command >= 0 && selected_command < number_executed_commands) {
             printf("Running command %s\n", argvv[0][1]);
             command_executor(saved_commands[selected_command].argvv,
@@ -292,6 +293,10 @@ int myhistory(char ***argvv, struct command *saved_commands, const int number_ex
             printf("Error: command not found\n");
             return -1;
         }
+    }
+    else {
+        printf("Error: number of arguments exceeded\n");
+        return -2;
     }
     return 0;
 }
@@ -349,7 +354,7 @@ int mytime(time_t start) {
 }
 
 int myexit(char ****argvv, struct command *saved_commands, char **filev, int number_executed_commands) {
-    printf("Goodbye!");
+    printf("Goodbye!\n");
     // Following the structure in free_command(), check if there's been a command stored
     if (saved_commands != NULL) {
         int i;
@@ -424,7 +429,13 @@ int main(void) {
         } else if (strcmp(argvv[0][0], "myhistory") == 0) {
             myhistory(argvv, saved_commands, number_executed_commands, num_commands);
         } else if (strcmp(argvv[0][0], "exit") == 0) {
-            exit(myexit(&argvv, saved_commands, filev, number_executed_commands));
+            if (myexit(&argvv, saved_commands, filev, number_executed_commands) == 0){
+                exit(EXIT_SUCCESS);
+            }
+            else {
+                perror("failed while freeing resources of msh");
+                exit(EXIT_FAILURE);
+            }
         } else {
             if (number_executed_commands < MAX_STORED_COMMANDS) {
                 // If the number of executed commands is below the maximum established,

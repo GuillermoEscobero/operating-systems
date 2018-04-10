@@ -224,7 +224,11 @@ int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
 
                 /* If not executed in background, wait for children */
                 if (bg == 0) {
-                    child_pid = wait(&status);
+                    child_pid = waitpid(pid, &status, 0);
+                    if (pid != child_pid) {
+                        perror("Error while waiting for the child");
+                        return -1;
+                    }
                     printf("Wait child %d\n", child_pid);
                 } else {
                     printf("[%d]\n", pid);
@@ -277,7 +281,7 @@ int myhistory(char ***argvv, struct command *saved_commands, const int number_ex
     // If the command is executed with no arguments, show the stored ones
     if (argvv[0][1] == NULL) {
         show_saved_commands(saved_commands, number_executed_commands);
-    } else if (argvv[0][2] == NULL){
+    } else if (argvv[0][2] == NULL) {
         // Get the number set as argument of the command
         int selected_command = (int) strtol(argvv[0][1], NULL, 10);
         // If the number is between 0 and the number of commands executed, run that command
@@ -290,11 +294,10 @@ int myhistory(char ***argvv, struct command *saved_commands, const int number_ex
                              saved_commands[selected_command].bg);
 
         } else {
-            printf("Error: command not found\n");
+            printf("ERROR: Command not found\n");
             return -1;
         }
-    }
-    else {
+    } else {
         printf("Error: number of arguments exceeded\n");
         return -2;
     }
@@ -417,9 +420,7 @@ int main(void) {
         if (num_commands == 0) continue;    /* Empty line */
 
 /*
- * THE PART THAT MUST BE REMOVED STARTS HERE
- * THE FOLLOWING LINES ONLY GIVE AN IDEA OF HOW TO USE THE STRUCTURES
- * argvv AND filev. THESE LINES MUST BE REMOVED.
+ * CODE ADDED BEYOND THIS POINT
  */
 
         if (strcmp(argvv[0][0], "mytime") == 0) {
@@ -429,10 +430,9 @@ int main(void) {
         } else if (strcmp(argvv[0][0], "myhistory") == 0) {
             myhistory(argvv, saved_commands, number_executed_commands, num_commands);
         } else if (strcmp(argvv[0][0], "exit") == 0) {
-            if (myexit(&argvv, saved_commands, filev, number_executed_commands) == 0){
+            if (myexit(&argvv, saved_commands, filev, number_executed_commands) == 0) {
                 exit(EXIT_SUCCESS);
-            }
-            else {
+            } else {
                 perror("failed while freeing resources of msh");
                 exit(EXIT_FAILURE);
             }
@@ -451,6 +451,9 @@ int main(void) {
             // Execute the command
             command_executor(argvv, filev, num_commands, bg);
         }
+
+        /* Wait for background processes that have ended (in zombie state) without blocking the execution */
+        while (waitpid(-1, NULL, WNOHANG) > 0) {}
 
     } //fin while
 

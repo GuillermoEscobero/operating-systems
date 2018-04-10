@@ -17,7 +17,6 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <time.h>
-#include <signal.h>
 
 #define MAX_STORED_COMMANDS 20
 #define MAX_PIPED_COMMANDS 3
@@ -91,26 +90,6 @@ void store_command(char ***argvv, char *filev[3], int bg, struct command *cmd) {
     }
 }
 
-void signal_handler(int signum) {
-    pid_t child_pid;
-    int exit_status;/* Exit code of child */
-
-    while (1) {
-        // Wait for all child processes (-1) without blocking the execution
-        child_pid = waitpid(-1, &exit_status, WNOHANG);
-        switch (child_pid){
-            case -1:
-                // There are no more child processes to wait (child_pid == -1)
-                return;
-            case 0:
-                // I'm the child (child_pid == 0), do nothing
-                return;
-            default:
-                printf("Wait child %d\n", child_pid);
-        }
-    }
-}
-
 int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
     /* Check requirement of maximum number of commands */
     if (num_commands > MAX_PIPED_COMMANDS) {
@@ -119,8 +98,9 @@ int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
     }
 
     int p[num_commands - 1][2]; /* Need N-1 pipes for N commands */
-    pid_t pid, child_pid;       /* Parent pid */
-    int i;                      /* Loop iterator */
+    pid_t pid, child_pid;     /* Parent and children pids */
+    int i;                    /* Loop iterator */
+    int status;               /* Exit code of child */
 
     /* Loop for each command */
     for (i = 0; i < num_commands; i++) {
@@ -133,13 +113,9 @@ int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
             }
         }
 
-        // if (bg == 1) {
-        //   /* Setup function to handle the signal sent by the child process to its father when it ends */
-        //   signal(SIGCHLD, signal_handler);
-        // }
-
         /* Child creation */
         pid = fork();
+
         switch (pid) {
             case -1:
                 perror("Error creating the child");
@@ -246,11 +222,16 @@ int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
                     }
                 }
 
-                if (bg == 1) {
-                    printf("[%d]\n", pid);
-                } else {
-                    child_pid = wait(NULL);
+                /* If not executed in background, wait for children */
+                if (bg == 0) {
+                    child_pid = waitpid(pid, &status, 0);
+                    if (pid != child_pid) {
+                        perror("Error while waiting for the child");
+                        return -1;
+                    }
                     printf("Wait child %d\n", child_pid);
+                } else {
+                    printf("[%d]\n", pid);
                 }
         }
     }
@@ -443,7 +424,6 @@ int main(void) {
  * THE FOLLOWING LINES ONLY GIVE AN IDEA OF HOW TO USE THE STRUCTURES
  * argvv AND filev. THESE LINES MUST BE REMOVED.
  */
-        //while (waitpid(-1, NULL, WNOHANG) != -1);
 
         if (strcmp(argvv[0][0], "mytime") == 0) {
             mytime(start_t);
@@ -474,24 +454,8 @@ int main(void) {
             command_executor(argvv, filev, num_commands, bg);
         }
 
-        int exit_status;/* Exit code of child */
-        int flag = 0;
-        while (flag == 0) {
-            // Wait for all child processes (-1) without blocking the execution
-            pid_t child_pid = waitpid(-1, &exit_status, WNOHANG);
-            switch (child_pid){
-                case -1:
-                    // There are no more child processes to wait (child_pid == -1)
-                    flag = 1;
-                    break;
-                case 0:
-                    // I'm the child (child_pid == 0), do nothing
-                    flag = 1;
-                    break;
-                default:
-                    printf("Wait child %d\n", child_pid);
-            }
-        }
+        /* Wait for background processes that have ended (in zombie state) without blocking the execution */
+        while (waitpid(-1, NULL, WNOHANG) > 0) {}
 
     } //fin while
 

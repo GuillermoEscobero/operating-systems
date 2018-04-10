@@ -294,7 +294,7 @@ int myhistory(char ***argvv, struct command *saved_commands, const int number_ex
                              saved_commands[selected_command].bg);
 
         } else {
-            printf("Error: command not found\n");
+            printf("ERROR: Command not found\n");
             return -1;
         }
     } else {

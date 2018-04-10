@@ -93,7 +93,7 @@ void store_command(char ***argvv, char *filev[3], int bg, struct command *cmd) {
 int command_executor(char ***argvv, char **filev, int num_commands, int bg) {
     /* Check requirement of maximum number of commands */
     if (num_commands > MAX_PIPED_COMMANDS) {
-        printf("Error: number of commands exceeded\n");
+        fprintf(stderr, "Error: number of commands exceeded\n");
         return -1;
     }
 
@@ -296,11 +296,11 @@ int myhistory(char ***argvv, struct command *saved_commands, const int number_ex
                              saved_commands[selected_command].bg);
 
         } else {
-            printf("ERROR: Command not found\n");
+            fprintf(stderr, "ERROR: Command not found\n");
             return -1;
         }
     } else {
-        printf("Error: number of arguments exceeded\n");
+        fprintf(stderr, "Error: number of arguments exceeded\n");
         return -2;
     }
     return 0;
@@ -344,7 +344,7 @@ int mytime(time_t start) {
     diff_t = difftime(now, start);
 
     if (diff_t < 0) {
-        printf("mytime error: error calculating difference of time\n");
+        fprintf(stderr, "mytime error: error calculating difference of time\n");
         return -1;
     }
 
@@ -435,7 +435,7 @@ int main(void) {
             if (myexit(&argvv, saved_commands, filev, number_executed_commands) == 0) {
                 exit(EXIT_SUCCESS);
             } else {
-                printf("ERROR: failed while freeing resources of msh");
+                fprintf(stderr, "ERROR: failed while freeing resources of msh");
                 exit(EXIT_FAILURE);
             }
         } else {

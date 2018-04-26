@@ -1,17 +1,5 @@
-# You are requested to write the exercise4.sh script, that will change the width of JPEG images 
-# (.jpg suffix) to 720 pixels (proportional height) for those files whose size is greater than 1 MiB and 
-# that are contained in the given directory (passed as a command-line parameter). 
-# Additionally, the pathname of each touched file shall be printed to stdout,
-
-# e.g.
-# $ cp -R /usr/share/backgrounds/gnome /tmp
-# $ ./exercise4.sh /tmp/gnome
-# /tmp/gnome/Flowerbed.jpg
-# /tmp/gnome/Godafoss_Iceland.jpg
-# /tmp/gnome/Signpost_of_the_Shadows.jpg
-# /tmp/gnome/Stones.jpg
-
 #!/bin/bash
+# Check if the number of arguments is correct
 if [ $# -eq 0 ]
 then 
     echo No arguments supplied
@@ -21,10 +9,17 @@ then
     echo More arguments than expected
     exit -1
 fi
+# Go to the directory taken as input in the script
 cd $1
+# Save in an array all the filenames whose size is bigger than the required one,
+# which is listed in the fifth coulumn of the ls -l output, whose extension is jpg 
+# (second columns of the ls -l output)
 ARRAY=( `ls -l | awk -F" " '$5 > 1024000 {print $9}' | awk -F"." '$2 == "jpg" {print $1 "." $2 }'` )
+# Iterate through the array
 for i in "${ARRAY[@]}"
 do 
+    # Print the complete route of the file
     echo `pwd`/$i
+    # Cut it to 720x720 size and override the file
     mogrify -resize 720x720 `pwd`/$i
 done

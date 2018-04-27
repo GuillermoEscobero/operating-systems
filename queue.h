@@ -16,5 +16,6 @@ int queue_put (struct plane* pln);
 struct plane * queue_get(void);
 int queue_empty (void);
 int queue_full(void);
+void display_queue(void);
 
 #endif

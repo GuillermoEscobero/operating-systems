@@ -20,15 +20,18 @@ int queue_init(int size){
         q->rear = -1;
 
         q->size = size;
-        q->elements = (struct plane**)malloc(size*sizeof(struct plane*));
+        q->elements = (struct plane**)malloc(sizeof(struct plane**));
+
+        for (int i = 0; i < size; i++) {
+          q->elements[i] = (struct plane*)malloc(sizeof(struct plane*));
+        }
 
         return 0;
 }
 
 /* To Enqueue an element*/
 int queue_put(struct plane* x) {
-        if ((q->front == 0 && q->rear == q->size-1) ||
-            (q->rear == (q->front-1)%(q->size-1))) {
+        if (queue_full() == 1) {
                 printf("Full queue\n");
                 return -1;
         } else if (q->front == -1) {
@@ -50,7 +53,7 @@ int queue_put(struct plane* x) {
 
 /* To Dequeue an element.*/
 struct plane* queue_get(void) {
-        if (q->front == -1) {
+        if (queue_empty() == 1) {
                 printf("Empty queue\n");
                 return NULL;
         }
@@ -95,7 +98,8 @@ int queue_full(void){
 
 /*To destroy the queue and free the resources*/
 int queue_destroy(void){
-        for (size_t i = 0; i < q->size; i++) {
+        int i;
+        for (i = 0; i < q->size; i++) {
                 free(q->elements[i]);
                 q->elements[i] = NULL;
         }
@@ -105,4 +109,36 @@ int queue_destroy(void){
         q = NULL;
 
         return 0;
+}
+
+void print_plane(struct plane* pln) {
+  printf("id_number = %d\n", pln->id_number);
+  printf("time_action = %d\n", pln->time_action);
+  printf("action = %d\n", pln->action);
+  printf("last_flight = %d\n", pln->last_flight);
+}
+
+void display_queue(void) {
+  int i;
+  if (queue_empty() == 1) {
+    return;
+  }
+
+  printf("Elements in circular queue are:\n");
+  if (q->rear >= q->front) {
+    for (i = q->front; i <= q->rear; i++) {
+      printf("PLANE IN POSITION %d\n", i);
+      print_plane(q->elements[i]);
+    }
+  } else {
+    for (i = q->front; i < q->size; i++) {
+      printf("PLANE IN POSITION %d\n", i);
+      print_plane(q->elements[i]);
+    }
+    for (i = 0; i <= q->rear; i++) {
+      printf("PLANE IN POSITION %d\n", i);
+      print_plane(q->elements[i]);
+    }
+  }
+
 }

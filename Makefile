@@ -1,25 +1,22 @@
 CC=gcc
-FLAGS=-g -Wall -Werror
-OBJ= queue airport
-LIBS= -pthread
+CFLAGS=-g -Wall -Werror
+LIBS=-lpthread
+EXE=arcport
+OBJ=queue.o arcport.o
 
-all:  $(OBJ)
+all: $(EXE)
 	@echo "***************************"
 	@echo "Compilation successfully!"
 	@echo ""
 
-queue: queue.c
-	$(CC) -c queue.c
+%.o: %.c
+	$(CC) $(CFLAGS) -c $<
 
-airport:	arcport.c
-	$(CC) $(CFLAGS)  $(LIBS)  -o arcport  arcport.c queue.c
-
-#load:
-#	ld -o process queue.o
+$(EXE): $(OBJ)
+	$(CC) $^ $(LIBS) -o $@
 
 clean:
-	rm -f arcport *.o
+	rm -f $(EXE) $(OBJ)
 	@echo "***************************"
 	@echo "Deleted files!"
 	@echo  ""
-

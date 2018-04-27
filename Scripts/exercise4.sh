@@ -20,6 +20,6 @@ for i in "${ARRAY[@]}"
 do 
     # Print the complete route of the file
     echo `pwd`/$i
-    # Cut it to 720x720 size and override the file
-    mogrify -resize 720x720 `pwd`/$i
+    # Cut it to 720 size maintaining the ratio and override the file
+    mogrify -resize 720 `pwd`/$i
 done

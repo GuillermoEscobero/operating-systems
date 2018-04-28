@@ -54,16 +54,9 @@ dkms.conf
 cmake-build-debug/
 
 # Binaries of the project
-printFile
-statistics
-split
-filter
-combine
+arcport
 
 .DS_Store
-/y.tab.h
-/msh
 /cmake_install.cmake
-/minishell.cbp
 /CMakeCache.txt
 /CMakeFiles/

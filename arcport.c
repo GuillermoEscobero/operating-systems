@@ -39,11 +39,11 @@ void print_end()
              "********************************************\n");
 }
 
-int track_manager(int n) {
+int track_manager(void) {
   int i;
   struct plane *pln = (struct plane*)malloc(sizeof(struct plane));
 
-  for (i = 0; i < n; i++) {
+  for (i = 0; i < planes_takeoff; i++) {
     pthread_mutex_lock(&mut_id);
 
     pln->id_number = next_id;
@@ -58,7 +58,7 @@ int track_manager(int n) {
 
     printf("[TRACKBOSS] Plane with id %d checked\n", pln->id_number);
     queue_put(pln);
-    sleep(pln->time_action);
+    // sleep(pln->time_action);
     printf("[TRACKBOSS] Plane with id %d ready to takeoff\n", pln->id_number);
 
     waiting--;
@@ -66,14 +66,15 @@ int track_manager(int n) {
 
     pthread_mutex_unlock(&mut_id);
   }
+  free(pln);
   return 0;
 }
 
-int radar(int n) {
+int radar(void) {
   int i;
   struct plane *pln = (struct plane*)malloc(sizeof(struct plane));
 
-  for (i = 0; i < n; i++) {
+  for (i = 0; i < planes_land; i++) {
     pthread_mutex_lock(&mut_id);
 
     pln->id_number = next_id;
@@ -88,7 +89,7 @@ int radar(int n) {
 
     printf("[RADAR] Plane with id %d detected!\n", pln->id_number);
     queue_put(pln);
-    sleep(pln->time_action);
+    // sleep(pln->time_action);
     printf("[RADAR] Plane with id %d ready to land\n", pln->id_number);
 
     waiting--;
@@ -96,13 +97,62 @@ int radar(int n) {
 
     pthread_mutex_unlock(&mut_id);
   }
+
+  free(pln);
+  return 0;
+}
+
+int tower(void) {
+  struct plane *pln = (struct plane*)malloc(sizeof(struct plane));
+  int last_flight = 0;
+  int served = 0;
+
+  while (last_flight == 0) {
+    pthread_mutex_lock(&mut_id);
+
+    if (queue_empty()) {
+      printf("[CONTROL] Waiting for planes in empty queue\n");
+    }
+    pln = queue_get();
+
+    if (pln == NULL) {
+      fprintf(stderr, "ERROR something go really wrong\n");
+      return -1;
+    }
+
+    switch (pln->action) {
+      case OP_TAKEOFF:
+          printf("[CONTROL] Putting plane with id %d in track\n", pln->id_number);
+
+          if (pln->last_flight == 1) {
+            printf("[CONTROL] After plane with id %d the airport will be closed\n", pln->id_number);
+          }
+          sleep(pln->time_action);
+          printf("[CONTROL] Plane %d took off after %d seconds\n", pln->id_number, pln->time_action);
+          break;
+      case OP_LAND:
+          printf("[CONTROL] Track is free for plane with id %d\n", pln->id_number);
+
+          if (pln->last_flight == 1) {
+            printf("[CONTROL] After plane with id %d the airport will be closed\n", pln->id_number);
+          }
+          sleep(pln->time_action);
+          printf("[CONTROL] Plane %d landed in %d seconds\n", pln->id_number, pln->time_action);
+          break;
+      default:
+          fprintf(stderr, "ERROR undefined operation code\n");
+    }
+    last_flight = pln->last_flight;
+    served++;
+    pthread_mutex_unlock(&mut_id);
+
+
+  }
+  printf("Airport closed!\n");
   return 0;
 }
 
 int main(int argc, char ** argv) {
-    waiting = planes_takeoff + planes_land;
-
-    print_banner();
 
     /* Testing lines while implementing */
     // queue_init (5);
@@ -134,17 +184,36 @@ int main(int argc, char ** argv) {
 
     /* FINISH TESTING LINES */
 
-    queue_init(DEFAULT_SIZE);
+    if (argc != 1 && argc != 6) {
+      fprintf(stderr, "%s\n\n", "usage 1: ./arcport");
+      fprintf(stderr, "%s\n\n", "usage 2: ./arcport <n_planes_takeoff> <time_to_takeoff> <n_planes_to_arrive> <time_to_arrive> <size_of_buffer>");
+      return -1;
+    }
+
+    print_banner();
+
+    if (argc != 1) {
+      planes_takeoff = atoi(argv[1]);
+      time_takeoff = atoi(argv[2]);
+      planes_land = atoi(argv[3]);
+      time_landing = atoi(argv[4]);
+      size = atoi(argv[5]);
+    }
+
+    waiting = planes_takeoff + planes_land;
+
+    queue_init(size);
 
     pthread_t pid[3];
-
-    pthread_create(&pid[0], NULL, (void*)track_manager, (void*)DEFAULT_PLANES_TAKEOFF);
-    pthread_create(&pid[1], NULL, (void*)radar, (void*)DEFAULT_PLANES_LAND);
+    pthread_create(&pid[0], NULL, (void*)track_manager, (void*)&planes_takeoff);
+    pthread_create(&pid[1], NULL, (void*)radar, (void*)&planes_land);
+    pthread_create(&pid[2], NULL, (void*)tower, NULL);
 
     pthread_join(pid[0], NULL);
     pthread_join(pid[1], NULL);
+    pthread_join(pid[2], NULL);
 
-	print_end();
+	  print_end();
 
     return 0;
 }

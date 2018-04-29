@@ -14,9 +14,13 @@ typedef struct queue {
 Queue *q;
 
 pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
+// pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t queue_full_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t queue_empty_cond = PTHREAD_COND_INITIALIZER;
 
-int flag = 0;
+// int queue_flag_operation = 0;
+int queue_flag_full = 0;
+int queue_flag_empty = 1;
 
 /*To create a queue*/
 int queue_init(int size){
@@ -38,21 +42,26 @@ int queue_init(int size){
 
 /* To Enqueue an element*/
 int queue_put(struct plane* x) {
-        printf("[QUEUE] Storing plane with id %d\n", x->id_number);
         pthread_mutex_lock(&queue_lock);
+        printf("[QUEUE] Storing plane with id %d\n", x->id_number);
 
-        while (flag == 1) {
-                pthread_cond_wait(&queue_cond, &queue_lock);
+        // while (queue_flag_operation == 1) {
+        //         pthread_cond_wait(&queue_cond, &queue_lock);
+        // }
+        // queue_flag_operation = 1;
+
+        while (queue_flag_full == 1) {
+          pthread_cond_wait(&queue_full_cond, &queue_lock);
         }
-        flag = 1;
-
+        /*
         if (queue_full() == 1) {
                 printf("Full queue\n");
-                flag = 0;
-                pthread_cond_signal(&queue_cond);
+                // queue_flag_operation = 0;
+                // pthread_cond_signal(&queue_cond);
                 pthread_mutex_unlock(&queue_lock);
                 return -1;
-        } else if (q->front == -1) {
+        } else */
+        if (q->front == -1) {
                 q->front = q->rear = 0;
                 q->elements[q->rear] = x;
         } else if (q->rear == q->size-1 && q->front != 0) {
@@ -63,8 +72,14 @@ int queue_put(struct plane* x) {
                 q->elements[q->rear] = x;
         }
 
-        flag = 0;
-        pthread_cond_signal(&queue_cond);
+        // queue_flag_operation = 0;
+        queue_flag_empty = 0;
+        if (queue_full() == 1) {
+          queue_flag_full = 1;
+        }
+
+        //pthread_cond_signal(&queue_cond);
+        pthread_cond_signal(&queue_empty_cond);
         pthread_mutex_unlock(&queue_lock);
         return 0;
 }
@@ -73,18 +88,24 @@ int queue_put(struct plane* x) {
 /* To Dequeue an element.*/
 struct plane* queue_get(void) {
         pthread_mutex_lock(&queue_lock);
-        while (flag == 1) {
-                pthread_cond_wait(&queue_cond, &queue_lock);
-        }
-        flag = 1;
 
-        if (queue_empty() == 1) {
-                printf("Empty queue\n");
-                flag = 0;
-                pthread_cond_signal(&queue_cond);
-                pthread_mutex_unlock(&queue_lock);
-                return NULL;
+        // while (queue_flag_operation == 1) {
+        //         pthread_cond_wait(&queue_cond, &queue_lock);
+        // }
+        while (queue_flag_empty == 1) {
+          pthread_cond_wait(&queue_empty_cond, &queue_lock);
         }
+
+
+        // queue_flag_operation = 1;
+
+        // if (queue_empty() == 1) {
+        //         printf("Empty queue\n");
+        //         queue_flag_operation = 0;
+        //         pthread_cond_signal(&queue_cond);
+        //         pthread_mutex_unlock(&queue_lock);
+        //         return NULL;
+        // }
 
         struct plane *element = q->elements[q->front];
         q->elements[q->front] = NULL;
@@ -99,8 +120,13 @@ struct plane* queue_get(void) {
         }
         printf("[QUEUE] Getting plane with id %d\n", element->id_number);
 
-        flag = 0;
-        pthread_cond_signal(&queue_cond);
+        // queue_flag_operation = 0;
+
+        if (queue_empty() == 1) {
+          queue_flag_empty = 1;
+        }
+
+        // pthread_cond_signal(&queue_cond);
         pthread_mutex_unlock(&queue_lock);
 
         return element;
@@ -110,21 +136,21 @@ struct plane* queue_get(void) {
 /*To check queue state*/
 int queue_empty(void){
         // pthread_mutex_lock(&queue_lock);
-        // while (flag == 1) {
+        // while (queue_flag_operation == 1) {
         //         pthread_cond_wait(&queue_cond, &queue_lock);
         // }
-        // flag = 1;
+        // queue_flag_operation = 1;
 
         if (q->front == -1) {
                 /* Queue empty */
-                printf("Empty queue\n");
-                // flag = 0;
+                // printf("Empty queue\n");
+                // queue_flag_operation = 0;
                 // pthread_cond_signal(&queue_cond);
                 // pthread_mutex_unlock(&queue_lock);
                 return 1;
         }
         /* Queue not empty */
-        // flag = 0;
+        // queue_flag_operation = 0;
         // pthread_cond_signal(&queue_cond);
         // pthread_mutex_unlock(&queue_lock);
         return 0;
@@ -133,21 +159,21 @@ int queue_empty(void){
 /*To check queue state*/
 int queue_full(void){
         // pthread_mutex_lock(&queue_lock);
-        // while (flag == 1) {
+        // while (queue_flag_operation == 1) {
         //         pthread_cond_wait(&queue_cond, &queue_lock);
         // }
-        // flag = 1;
+        // queue_flag_operation = 1;
 
         if ((q->front == 0 && q->rear == q->size-1) ||
             (q->rear == (q->front-1)%(q->size-1))) {
                 printf("Full queue\n");
-                // flag = 0;
+                // queue_flag_operation = 0;
                 // pthread_cond_signal(&queue_cond);
                 // pthread_mutex_unlock(&queue_lock);
                 return 1;
         }
         /* Queue not full */
-        // flag = 0;
+        // queue_flag_operation = 0;
         // pthread_cond_signal(&queue_cond);
         // pthread_mutex_unlock(&queue_lock);
         return 0;

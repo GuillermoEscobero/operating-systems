@@ -4,6 +4,8 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include <string.h>
+
 #define NUM_TRACKS 1
 
 #define OP_TAKEOFF 0
@@ -15,7 +17,9 @@
 #define DEFAULT_TIME_LANDING 3
 #define DEFAULT_SIZE 6
 
-pthread_mutex_t mut_id = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mut_id;
+pthread_mutex_t data_mutex;
+pthread_cond_t queue_not_full, queue_not_empty;
 
 int planes_takeoff = DEFAULT_PLANES_TAKEOFF;
 int time_takeoff = DEFAULT_TIME_TAKEOFF;
@@ -24,7 +28,8 @@ int time_landing = DEFAULT_TIME_LANDING;
 int size = DEFAULT_SIZE;
 
 int next_id = 0;
-int waiting = 0;
+int served_landings = 0;
+int served_takeoffs = 0;
 
 void print_banner()
 {
@@ -39,150 +44,148 @@ void print_end()
              "********************************************\n");
 }
 
-int track_manager(void) {
+void track_manager(void) {
   int i;
   struct plane *pln = (struct plane*)malloc(sizeof(struct plane));
 
   for (i = 0; i < planes_takeoff; i++) {
-    pthread_mutex_lock(&mut_id);
-
     pln->id_number = next_id;
     pln->time_action = time_takeoff;
     pln->action = OP_TAKEOFF;
 
-    if (waiting == 1) {
+    if (next_id == (planes_land+planes_takeoff-1)) {
       pln->last_flight = 1;
     } else {
       pln->last_flight = 0;
     }
 
-    printf("[TRACKBOSS] Plane with id %d checked\n", pln->id_number);
-    queue_put(pln);
-    // sleep(pln->time_action);
-    printf("[TRACKBOSS] Plane with id %d ready to takeoff\n", pln->id_number);
-
-    waiting--;
+    pthread_mutex_lock(&data_mutex);
     next_id++;
 
-    pthread_mutex_unlock(&mut_id);
+
+    printf("[TRACKBOSS] Plane with id %d checked\n", pln->id_number);
+    while (queue_full() == 1) {
+      pthread_cond_wait(&queue_not_full, &data_mutex);
+    }
+    queue_put(pln);
+    printf("[TRACKBOSS] Plane with id %d ready to takeoff\n", pln->id_number);
+    pthread_cond_signal(&queue_not_empty);
+
+    pthread_mutex_unlock(&data_mutex);
+
   }
   free(pln);
-  return 0;
+  pthread_exit(0);
 }
 
-int radar(void) {
+void radar(void) {
   int i;
   struct plane *pln = (struct plane*)malloc(sizeof(struct plane));
 
   for (i = 0; i < planes_land; i++) {
-    pthread_mutex_lock(&mut_id);
 
     pln->id_number = next_id;
     pln->time_action = time_landing;
     pln->action = OP_LAND;
 
-    if (waiting == 1) {
+    if (pln->id_number == (planes_land+planes_takeoff-1)) {
       pln->last_flight = 1;
     } else {
       pln->last_flight = 0;
     }
 
-    printf("[RADAR] Plane with id %d detected!\n", pln->id_number);
-    queue_put(pln);
-    // sleep(pln->time_action);
-    printf("[RADAR] Plane with id %d ready to land\n", pln->id_number);
-
-    waiting--;
+    pthread_mutex_lock(&data_mutex);
     next_id++;
 
-    pthread_mutex_unlock(&mut_id);
+
+    printf("[RADAR] Plane with id %d detected!\n", pln->id_number);
+    while (queue_full() == 1) {
+      pthread_cond_wait(&queue_not_full, &data_mutex);
+    }
+    queue_put(pln);
+
+    printf("[RADAR] Plane with id %d ready to land\n", pln->id_number);
+
+    pthread_cond_signal(&queue_not_empty);
+    pthread_mutex_unlock(&data_mutex);
   }
 
   free(pln);
+  pthread_exit(0);
+}
+
+int serve_landing(struct plane *pln) {
+  struct plane pln_local;
+  memcpy(&pln_local, pln, sizeof(struct plane));
+
+  printf("[CONTROL] Track is free for plane with id %d\n", pln_local.id_number);
+
+  if (pln_local.last_flight == 1) {
+    printf("[CONTROL] After plane with id %d the airport will be closed\n", pln_local.id_number);
+  }
+  sleep(pln_local.time_action);
+  printf("[CONTROL] Plane %d landed in %d seconds$$$$$$$$$$$$$$$$$$$\n", pln_local.id_number, pln_local.time_action);
+  served_landings++;
+
   return 0;
 }
 
-int tower(void) {
-  struct plane *pln = (struct plane*)malloc(sizeof(struct plane));
-  int last_flight = 0;
-  int served = 0;
+int serve_takeoff(struct plane *pln) {
+  struct plane pln_local;
+  memcpy(&pln_local, pln, sizeof(struct plane));
 
-  while (last_flight == 0) {
-    pthread_mutex_lock(&mut_id);
+  printf("[CONTROL] Putting plane with id %d in track\n", pln_local.id_number);
 
-    if (queue_empty()) {
+  if (pln_local.last_flight == 1) {
+    printf("[CONTROL] After plane with id %d the airport will be closed\n", pln_local.id_number);
+  }
+  sleep(pln_local.time_action);
+  printf("[CONTROL] Plane %d took off after %d seconds$$$$$$$$$$$$$$$$$\n", pln_local.id_number, pln_local.time_action);
+  served_takeoffs++;
+
+  return 0;
+}
+
+void tower(void) {
+  // struct plane *last = (struct plane*)malloc(sizeof(struct plane));
+
+  while (served_landings+served_takeoffs < planes_land+planes_takeoff) {
+    pthread_mutex_lock(&data_mutex);
+
+    while (queue_empty() == 1) {
       printf("[CONTROL] Waiting for planes in empty queue\n");
+      pthread_cond_wait(&queue_not_empty, &data_mutex);
     }
+
     pln = queue_get();
+
+    pthread_cond_signal(&queue_not_full);
+    pthread_mutex_unlock(&data_mutex);
 
     if (pln == NULL) {
       fprintf(stderr, "ERROR something go really wrong\n");
-      return -1;
+      pthread_exit(0);
     }
 
-    switch (pln->action) {
-      case OP_TAKEOFF:
-          printf("[CONTROL] Putting plane with id %d in track\n", pln->id_number);
-
-          if (pln->last_flight == 1) {
-            printf("[CONTROL] After plane with id %d the airport will be closed\n", pln->id_number);
-          }
-          sleep(pln->time_action);
-          printf("[CONTROL] Plane %d took off after %d seconds\n", pln->id_number, pln->time_action);
-          break;
-      case OP_LAND:
-          printf("[CONTROL] Track is free for plane with id %d\n", pln->id_number);
-
-          if (pln->last_flight == 1) {
-            printf("[CONTROL] After plane with id %d the airport will be closed\n", pln->id_number);
-          }
-          sleep(pln->time_action);
-          printf("[CONTROL] Plane %d landed in %d seconds\n", pln->id_number, pln->time_action);
-          break;
-      default:
-          fprintf(stderr, "ERROR undefined operation code\n");
+    if (pln->action == OP_TAKEOFF) {
+      serve_takeoff(pln);
+    } else {
+      serve_landing(pln);
     }
-    last_flight = pln->last_flight;
-    served++;
-    pthread_mutex_unlock(&mut_id);
 
+    // if (pln->last_flight == 1) {
+    //   break;
+    // }
 
   }
+
+  //free(pln);
   printf("Airport closed!\n");
-  return 0;
+  printf("SERVED FLIGHTS: %d\n", served_landings+served_takeoffs);
+  pthread_exit(0);
 }
 
 int main(int argc, char ** argv) {
-
-    /* Testing lines while implementing */
-    // queue_init (5);
-    // printf("queue_empty() = %d\n", queue_empty());
-    // printf("queue_full() = %d\n", queue_full());
-    //
-    // struct plane iberia = {
-    //   .id_number = 123,
-    //   .time_action = 5548,
-    //   .action = 4,
-    //   .last_flight = 556,
-    // };
-    //
-    // struct plane *caramel;
-    // queue_put (&iberia);
-    // printf("queue_empty() = %d\n", queue_empty());
-    // printf("queue_full() = %d\n", queue_full());
-    // display_queue();
-    // caramel = queue_get();
-    // printf("queue_empty() = %d\n", queue_empty());
-    // printf("queue_full() = %d\n", queue_full());
-    //
-    // printf("\nPLANE caramel\n");
-    // printf("id_number = %d\n", caramel->id_number);
-    // printf("time_action = %d\n", caramel->time_action);
-    // printf("action = %d\n", caramel->action);
-    // printf("last_flight = %d\n", caramel->last_flight);
-    // queue_destroy();
-
-    /* FINISH TESTING LINES */
 
     if (argc != 1 && argc != 6) {
       fprintf(stderr, "%s\n\n", "usage 1: ./arcport");
@@ -200,7 +203,12 @@ int main(int argc, char ** argv) {
       size = atoi(argv[5]);
     }
 
-    waiting = planes_takeoff + planes_land;
+    pthread_mutex_init(&mut_id, NULL);
+    pthread_mutex_init(&data_mutex, NULL);
+    pthread_cond_init(&queue_not_full, NULL);
+    pthread_cond_init(&queue_not_empty, NULL);
+
+    //waiting = planes_takeoff + planes_land;
 
     queue_init(size);
 
@@ -214,6 +222,11 @@ int main(int argc, char ** argv) {
     pthread_join(pid[2], NULL);
 
 	  print_end();
+
+    queue_destroy();
+    pthread_mutex_destroy(&mut_id);
+    pthread_cond_destroy(&queue_not_full);
+    pthread_cond_destroy(&queue_not_empty);
 
     return 0;
 }

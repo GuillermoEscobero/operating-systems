@@ -160,10 +160,6 @@ int main(int argc, char **argv) {
         size = (int) strtol(argv[5], NULL, 10);
     }
 
-    if (size == 0) {
-        fprintf(stderr, "%s\n\n", "The size cannot be 0");
-        return -1;
-    }
     pthread_mutex_init(&main_mutex, NULL);
 
     queue_init(size);

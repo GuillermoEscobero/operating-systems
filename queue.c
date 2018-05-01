@@ -60,13 +60,12 @@ int queue_put(struct plane *x) {
 
 /* To Dequeue an element.*/
 struct plane *queue_get(void) {
-    //FIXME: esto no deberia ir aqui
+    //FIXME: esto no deberia ir aqui, no?
     pthread_mutex_lock(&queue_mutex);
     while (queue_empty() == 1) {
         printf("[CONTROL] Waiting for planes in empty queue\n");
         pthread_cond_wait(&queue_not_empty, &queue_mutex);
     }
-    // pthread_mutex_lock(&queue_mutex);
     struct plane *element = q->elements[q->front];
     if (q->front == q->rear) {
         q->front = -1;
@@ -83,28 +82,23 @@ struct plane *queue_get(void) {
 
 /*To check queue state*/
 int queue_empty(void) {
-    //pthread_mutex_lock(&queue_mutex);
     if (q->front == -1) {
         /* Queue empty */
-        // printf("Empty queue\n");
-        //pthread_mutex_unlock(&queue_mutex);
+        printf("Empty queue\n");
         return 1;
     }
     /* Queue not empty */
-    //pthread_mutex_unlock(&queue_mutex);
     return 0;
 }
 
 /*To check queue state*/
 int queue_full(void) {
-    // pthread_mutex_lock(&queue_mutex);
     if ((q->rear + 1) % q->size == (q->rear)) {
+        //FIXME: cuando el buffer es de 2 no comprueba esto
         printf("Full queue\n");
-        // pthread_mutex_unlock(&queue_mutex);
         return 1;
     }
     /* Queue not full */
-    // pthread_mutex_unlock(&queue_mutex);
     return 0;
 }
 
@@ -120,6 +114,7 @@ int queue_destroy(void) {
     return 0;
 }
 
+//TODO: remove these two functions
 void print_plane(struct plane *pln) {
     printf("id_number = %d\n", pln->id_number);
     printf("time_action = %d\n", pln->time_action);

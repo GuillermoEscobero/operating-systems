@@ -45,8 +45,7 @@ int serve_landing(struct plane *pln) {
     if (pln->last_flight == 1) {
         printf("[CONTROL] After plane with id %d the airport will be closed\n", pln->id_number);
     }
-    //FIXME: aqui va a haber peleas con el id de vuelo
-    sleep(pln->time_action);
+    sleep((unsigned int) pln->time_action);
     printf("[CONTROL] Plane %d landed in %d seconds$$$$$$$$$$$$$$$$$$$\n", pln->id_number, pln->time_action);
     served_landings++;
 
@@ -58,8 +57,7 @@ int serve_takeoff(struct plane *pln) {
     if (pln->last_flight == 1) {
         printf("[CONTROL] After plane with id %d the airport will be closed\n", pln->id_number);
     }
-    //FIXME: aqui va a haber peleas con el id de vuelo, despues de hacer el sleep se cambia el pln
-    sleep(pln->time_action);
+    sleep((unsigned int) pln->time_action);
     printf("[CONTROL] Plane %d took off after %d seconds$$$$$$$$$$$$$$$$$\n", pln->id_number, pln->time_action);
     served_takeoffs++;
 
@@ -68,8 +66,6 @@ int serve_takeoff(struct plane *pln) {
 
 void track_manager(void) {
     int i;
-    //struct plane *pln = (struct plane *) malloc(sizeof(struct plane));
-
     for (i = 0; i < planes_takeoff; i++) {
         pthread_mutex_lock(&main_mutex);
         struct plane *pln = (struct plane *) malloc(sizeof(struct plane));
@@ -86,7 +82,6 @@ void track_manager(void) {
         printf("[TRACKBOSS] Plane with id %d checked\n", pln->id_number);
 
         queue_put(pln);
-        //free(pln);
         printf("[TRACKBOSS] Plane with id %d ready to takeoff\n", pln->id_number);
         pthread_mutex_unlock(&main_mutex);
 
@@ -96,8 +91,6 @@ void track_manager(void) {
 
 void radar(void) {
     int i;
-    //struct plane *pln = (struct plane *) malloc(sizeof(struct plane));
-
     for (i = 0; i < planes_land; i++) {
         pthread_mutex_lock(&main_mutex);
         struct plane *pln = (struct plane *) malloc(sizeof(struct plane));
@@ -114,7 +107,6 @@ void radar(void) {
         printf("[RADAR] Plane with id %d detected!\n", pln->id_number);
         queue_put(pln);
         printf("[RADAR] Plane with id %d ready to land\n", pln->id_number);
-        //free(pln);
         pthread_mutex_unlock(&main_mutex);
     }
     pthread_exit(0);
@@ -126,10 +118,7 @@ void tower(void) {
     while (last_flight == 0) {
         struct plane *pln;
 
-        //FIXME: no pilla bien el plane que le toca en cada momento, se los salta o yo que se
         pln = queue_get();
-        //print_plane(pln);
-        //display_queue();
 
         if (pln == NULL) {
             fprintf(stderr, "ERROR something went really wrong\n");
@@ -164,16 +153,18 @@ int main(int argc, char **argv) {
     print_banner();
 
     if (argc != 1) {
-        planes_takeoff = atoi(argv[1]);
-        time_takeoff = atoi(argv[2]);
-        planes_land = atoi(argv[3]);
-        time_landing = atoi(argv[4]);
-        size = atoi(argv[5]);
+        planes_takeoff = (int) strtol(argv[1], NULL, 10);
+        time_takeoff = (int) strtol(argv[2], NULL, 10);
+        planes_land = (int) strtol(argv[3], NULL, 10);
+        time_landing = (int) strtol(argv[4], NULL, 10);
+        size = (int) strtol(argv[5], NULL, 10);
     }
 
+    if (size == 0) {
+        fprintf(stderr, "%s\n\n", "The size cannot be 0");
+        return -1;
+    }
     pthread_mutex_init(&main_mutex, NULL);
-
-    //waiting = planes_takeoff + planes_land;
 
     queue_init(size);
 

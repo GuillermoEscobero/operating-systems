@@ -19,6 +19,10 @@ Queue *q;
 
 /*To create a queue*/
 int queue_init(int size) {
+    if (size == 0) {
+        fprintf(stderr, "%s\n\n", "ERROR: The size cannot be 0");
+        return -1;
+    }
     q = (Queue *) malloc(sizeof(Queue));
     if (!q) {
         fprintf(stderr, "ERROR while initializing queue\n");
@@ -93,7 +97,6 @@ int queue_empty(void) {
 /*To check queue state*/
 int queue_full(void) {
     if ((q->rear + 1) % q->size == (q->front)) {
-        //FIXME: cuando el buffer es de 2 no comprueba esto
         return 1;
     }
     /* Queue not full */

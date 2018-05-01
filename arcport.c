@@ -124,7 +124,6 @@ void radar(void) {
 void tower(void) {
     int last_flight = 0;
     while (last_flight == 0) {
-        pthread_mutex_lock(&main_mutex);
         struct plane *pln;
 
         //FIXME: no pilla bien el plane que le toca en cada momento, se los salta o yo que se
@@ -145,8 +144,6 @@ void tower(void) {
 
         last_flight = pln->last_flight;
         free(pln);
-        pthread_mutex_unlock(&main_mutex);
-
 
     }
 

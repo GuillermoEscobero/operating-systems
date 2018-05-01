@@ -63,8 +63,8 @@ struct plane *queue_get(void) {
     //FIXME: esto no deberia ir aqui
     pthread_mutex_lock(&queue_mutex);
     while (queue_empty() == 1) {
-        pthread_cond_wait(&queue_not_empty, &queue_mutex);
         printf("[CONTROL] Waiting for planes in empty queue\n");
+        pthread_cond_wait(&queue_not_empty, &queue_mutex);
     }
     // pthread_mutex_lock(&queue_mutex);
     struct plane *element = q->elements[q->front];
@@ -99,7 +99,7 @@ int queue_empty(void) {
 int queue_full(void) {
     // pthread_mutex_lock(&queue_mutex);
     if ((q->rear + 1) % q->size == (q->rear)) {
-        // printf("Full queue\n");
+        printf("Full queue\n");
         // pthread_mutex_unlock(&queue_mutex);
         return 1;
     }

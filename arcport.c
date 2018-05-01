@@ -87,9 +87,10 @@ void track_manager(void) {
         }
         next_id++;
         printf("[TRACKBOSS] Plane with id %d checked\n", pln->id_number);
+        pthread_mutex_unlock(&main_mutex);
+
         queue_put(pln);
         printf("[TRACKBOSS] Plane with id %d ready to takeoff\n", pln->id_number);
-        pthread_mutex_unlock(&main_mutex);
     }
     free(pln);
     pthread_exit(0);
@@ -128,7 +129,8 @@ void tower(void) {
 
         //FIXME: no pilla bien el plane que le toca en cada momento, se los salta o yo que se
         pln = queue_get();
-        display_queue();
+        //print_plane(pln);
+        //display_queue();
 
         if (pln == NULL) {
             fprintf(stderr, "ERROR something went really wrong\n");

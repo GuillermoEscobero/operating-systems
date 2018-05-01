@@ -28,6 +28,7 @@ int size = DEFAULT_SIZE;
 int next_id = 0;
 int served_landings = 0;
 int served_takeoffs = 0;
+int last_flight = 0;
 
 void print_banner() {
     printf("\n*****************************************\n");
@@ -40,25 +41,25 @@ void print_end() {
              "********************************************\n");
 }
 
-int serve_landing(struct plane *pln) {
-    printf("[CONTROL] Track is free for plane with id %d\n", pln->id_number);
+int serve_landing(struct plane *pln, int tower) {
+    printf("[CONTROL_%d] Track is free for plane with id %d\n", tower, pln->id_number);
     if (pln->last_flight == 1) {
-        printf("[CONTROL] After plane with id %d the airport will be closed\n", pln->id_number);
+        printf("[CONTROL_%d] After plane with id %d the airport will be closed\n", tower, pln->id_number);
     }
     sleep((unsigned int) pln->time_action);
-    printf("[CONTROL] Plane %d landed in %d seconds$$$$$$$$$$$$$$$$$$$\n", pln->id_number, pln->time_action);
+    printf("[CONTROL_%d] Plane %d landed in %d seconds$$$$$$$$$$$$$$$$$$$\n", tower, pln->id_number, pln->time_action);
     served_landings++;
 
     return 0;
 }
 
-int serve_takeoff(struct plane *pln) {
-    printf("[CONTROL] Putting plane with id %d in track\n", pln->id_number);
+int serve_takeoff(struct plane *pln, int tower) {
+    printf("[CONTROL_%d] Putting plane with id %d in track\n", tower, pln->id_number);
     if (pln->last_flight == 1) {
-        printf("[CONTROL] After plane with id %d the airport will be closed\n", pln->id_number);
+        printf("[CONTROL_%d] After plane with id %d the airport will be closed\n", tower, pln->id_number);
     }
     sleep((unsigned int) pln->time_action);
-    printf("[CONTROL] Plane %d took off after %d seconds$$$$$$$$$$$$$$$$$\n", pln->id_number, pln->time_action);
+    printf("[CONTROL_%d] Plane %d took off after %d seconds$$$$$$$$$$$$$$$$$\n", tower, pln->id_number, pln->time_action);
     served_takeoffs++;
 
     return 0;
@@ -114,7 +115,7 @@ void radar(void) {
 
 
 void tower(void) {
-    int last_flight = 0;
+    // int last_flight = 0;
     while (last_flight == 0) {
         struct plane *pln;
 
@@ -126,9 +127,9 @@ void tower(void) {
         }
 
         if (pln->action == OP_TAKEOFF) {
-            serve_takeoff(pln);
+            serve_takeoff(pln, 1);
         } else {
-            serve_landing(pln);
+            serve_landing(pln, 1);
         }
 
         last_flight = pln->last_flight;
@@ -137,7 +138,32 @@ void tower(void) {
     }
 
     printf("Airport closed!\n");
-    printf("SERVED FLIGHTS: %d\n", served_landings + served_takeoffs);
+    pthread_exit(0);
+}
+
+void tower2(void) {
+    while (last_flight == 0) {
+        struct plane *pln;
+
+        pln = queue_get();
+
+        if (pln == NULL) {
+            fprintf(stderr, "ERROR something went really wrong\n");
+            pthread_exit(0);
+        }
+
+        if (pln->action == OP_TAKEOFF) {
+            serve_takeoff(pln, 2);
+        } else {
+            serve_landing(pln, 2);
+        }
+
+        last_flight = pln->last_flight;
+        free(pln);
+
+    }
+
+    printf("Airport closed!\n");
     pthread_exit(0);
 }
 
@@ -168,14 +194,16 @@ int main(int argc, char **argv) {
 
     queue_init(size);
 
-    pthread_t pid[3];
+    pthread_t pid[4];
     pthread_create(&pid[0], NULL, (void *) track_manager, (void *) &planes_takeoff);
     pthread_create(&pid[1], NULL, (void *) radar, (void *) &planes_land);
     pthread_create(&pid[2], NULL, (void *) tower, NULL);
+    pthread_create(&pid[3], NULL, (void *) tower2, NULL);
 
     pthread_join(pid[0], NULL);
     pthread_join(pid[1], NULL);
     pthread_join(pid[2], NULL);
+    pthread_join(pid[3], NULL);
 
     print_end();
 

@@ -4,8 +4,9 @@
 #include <pthread.h>
 #include "queue.h"
 
-pthread_mutex_t queue_mutex;
-pthread_cond_t queue_not_empty, queue_not_full;
+pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t queue_not_empty = PTHREAD_COND_INITIALIZER;
+pthread_cond_t queue_not_full = PTHREAD_COND_INITIALIZER;
 
 typedef struct queue {
     int front, rear;
@@ -60,11 +61,12 @@ int queue_put(struct plane *x) {
 /* To Dequeue an element.*/
 struct plane *queue_get(void) {
     //FIXME: esto no deberia ir aqui
+    pthread_mutex_lock(&queue_mutex);
     while (queue_empty() == 1) {
         pthread_cond_wait(&queue_not_empty, &queue_mutex);
         printf("[CONTROL] Waiting for planes in empty queue\n");
     }
-    pthread_mutex_lock(&queue_mutex);
+    // pthread_mutex_lock(&queue_mutex);
     struct plane *element = q->elements[q->front];
     if (q->front == q->rear) {
         q->front = -1;
@@ -81,28 +83,28 @@ struct plane *queue_get(void) {
 
 /*To check queue state*/
 int queue_empty(void) {
-    pthread_mutex_lock(&queue_mutex);
+    //pthread_mutex_lock(&queue_mutex);
     if (q->front == -1) {
         /* Queue empty */
         // printf("Empty queue\n");
-        pthread_mutex_unlock(&queue_mutex);
+        //pthread_mutex_unlock(&queue_mutex);
         return 1;
     }
     /* Queue not empty */
-    pthread_mutex_unlock(&queue_mutex);
+    //pthread_mutex_unlock(&queue_mutex);
     return 0;
 }
 
 /*To check queue state*/
 int queue_full(void) {
-    pthread_mutex_lock(&queue_mutex);
+    // pthread_mutex_lock(&queue_mutex);
     if ((q->rear + 1) % q->size == (q->rear)) {
         // printf("Full queue\n");
-        pthread_mutex_unlock(&queue_mutex);
+        // pthread_mutex_unlock(&queue_mutex);
         return 1;
     }
     /* Queue not full */
-    pthread_mutex_unlock(&queue_mutex);
+    // pthread_mutex_unlock(&queue_mutex);
     return 0;
 }
 

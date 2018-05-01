@@ -4,7 +4,7 @@
  set(CMAKE_C_STANDARD 99)
  set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -g -Wall -Werror")
 
- ADD_EXECUTABLE(arcport queue.c arcport.c)
+ ADD_EXECUTABLE(arcport queue.c arcport.c queue.h plane.h)
 
  TARGET_LINK_LIBRARIES(arcport -lpthread)
 

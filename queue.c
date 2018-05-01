@@ -84,7 +84,6 @@ struct plane *queue_get(void) {
 int queue_empty(void) {
     if (q->front == -1) {
         /* Queue empty */
-        printf("Empty queue\n");
         return 1;
     }
     /* Queue not empty */
@@ -93,9 +92,8 @@ int queue_empty(void) {
 
 /*To check queue state*/
 int queue_full(void) {
-    if ((q->rear + 1) % q->size == (q->rear)) {
+    if ((q->rear + 1) % q->size == (q->front)) {
         //FIXME: cuando el buffer es de 2 no comprueba esto
-        printf("Full queue\n");
         return 1;
     }
     /* Queue not full */
@@ -112,40 +110,4 @@ int queue_destroy(void) {
     pthread_cond_destroy(&queue_not_full);
 
     return 0;
-}
-
-//TODO: remove these two functions
-void print_plane(struct plane *pln) {
-    printf("id_number = %d\n", pln->id_number);
-    printf("time_action = %d\n", pln->time_action);
-    printf("action = %d\n", pln->action);
-    printf("last_flight = %d\n", pln->last_flight);
-}
-
-void display_queue(void) {
-    pthread_mutex_lock(&queue_mutex);
-    int i;
-    if (queue_empty() == 1) {
-        return;
-    }
-
-    printf("Elements in circular queue are:\n");
-    if (q->rear >= q->front) {
-        for (i = q->front; i <= q->rear; i++) {
-            printf("PLANE IN POSITION %d\n", i);
-            print_plane(q->elements[i]);
-        }
-    } else {
-        for (i = q->front; i < q->size; i++) {
-            printf("PLANE IN POSITION %d\n", i);
-            print_plane(q->elements[i]);
-        }
-        for (i = 0; i <= q->rear; i++) {
-            printf("PLANE IN POSITION %d\n", i);
-            print_plane(q->elements[i]);
-        }
-    }
-    pthread_mutex_unlock(&queue_mutex);
-
-
 }

@@ -121,12 +121,10 @@ int queue_destroy(void) {
 }
 
 void print_plane(struct plane *pln) {
-    pthread_mutex_lock(&queue_mutex);
     printf("id_number = %d\n", pln->id_number);
     printf("time_action = %d\n", pln->time_action);
     printf("action = %d\n", pln->action);
     printf("last_flight = %d\n", pln->last_flight);
-    pthread_mutex_unlock(&queue_mutex);
 }
 
 void display_queue(void) {

@@ -123,7 +123,8 @@ void radar(void) {
 
 
 void tower(void) {
-    while (served_landings + served_takeoffs < planes_land + planes_takeoff) {
+    int last_flight = 0;
+    while (last_flight == 0) {
         pthread_mutex_lock(&main_mutex);
         struct plane *pln = (struct plane *) malloc(sizeof(struct plane));
 
@@ -143,9 +144,7 @@ void tower(void) {
             serve_landing(pln);
         }
 
-        // if (pln->last_flight == 1) {
-        //   break;
-        // }
+        last_flight = pln->last_flight;
         pthread_mutex_unlock(&main_mutex);
     }
 

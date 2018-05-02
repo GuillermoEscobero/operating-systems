@@ -61,6 +61,11 @@ int queue_put(struct plane *x) {
     }
     printf("[QUEUE] Storing plane with id %d\n", x->id_number);
 
+    if (q->rear == NULL || q->front == NULL) {
+        fprintf(stderr, "%s\n", "ERROR rear/front element in queue is NULL");
+        return -1;
+    }
+
     /* Make up space for the new element */
     q->rear = (q->rear + 1) % q->size;
     /* Introduce the element into the queue */
@@ -82,7 +87,6 @@ int queue_put(struct plane *x) {
 
 /* To Dequeue an element.*/
 struct plane *queue_get(void) {
-    //FIXME: esto no deberia ir aqui, no?
     /* Lock the mutex to avoid other queue functions to access/edit it at the same time */
     pthread_mutex_lock(&queue_mutex);
 
@@ -91,8 +95,15 @@ struct plane *queue_get(void) {
         printf("[CONTROL] Waiting for planes in empty queue\n");
         pthread_cond_wait(&queue_not_empty, &queue_mutex);
     }
+
+    if (q->rear == NULL || q->front == NULL) {
+        fprintf(stderr, "%s\n", "ERROR rear/front element in queue is NULL");
+        return NULL;
+    }
+
     /* Get the element from the queue */
     struct plane *element = q->elements[q->front];
+
     /* If the element is the same at the beginning and at the end of the circular queue, the queue
      * is empty and a -1 is set in both sides to show it */
     if (q->front == q->rear) {
@@ -143,9 +154,19 @@ int queue_destroy(void) {
     free(q);
 
     /* Delete both the conditions and the mutex used in queue.c */
-    pthread_mutex_destroy(&queue_mutex);
-    pthread_cond_destroy(&queue_not_empty);
-    pthread_cond_destroy(&queue_not_full);
+    if (pthread_mutex_destroy(&queue_mutex) != 0) {
+        fprintf(stderr, "%s\n", "ERROR when destroying the queue mutex");
+        return -1;
+    }
+    if (pthread_cond_destroy(&queue_not_empty) != 0) {
+        fprintf(stderr, "%s\n", "ERROR when destroying the queue_not_empty condition");
+        return -1;
+    }
+
+    if (pthread_cond_destroy(&queue_not_full) != 0){
+        fprintf(stderr, "%s\n", "ERROR when destroying the queue_not_empty condition");
+        return -1;
+    }
 
     return 0;
 }

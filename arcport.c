@@ -125,7 +125,7 @@ void radar(void) {
 
         struct plane *pln = (struct plane *) malloc(sizeof(struct plane));
         if (pln == NULL) {
-          fprintf(stderr, "%s\n", "ERROR while allocating memory in track_manager");
+          fprintf(stderr, "%s\n", "ERROR while allocating memory in radar");
           int error = -1;
           pthread_exit(&error);
         }

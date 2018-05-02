@@ -61,11 +61,6 @@ int queue_put(struct plane *x) {
     }
     printf("[QUEUE] Storing plane with id %d\n", x->id_number);
 
-    if (q->rear == NULL || q->front == NULL) {
-        fprintf(stderr, "%s\n", "ERROR rear/front element in queue is NULL");
-        return -1;
-    }
-
     /* Make up space for the new element */
     q->rear = (q->rear + 1) % q->size;
     /* Introduce the element into the queue */
@@ -94,11 +89,6 @@ struct plane *queue_get(void) {
     while (queue_empty() == 1) {
         printf("[CONTROL] Waiting for planes in empty queue\n");
         pthread_cond_wait(&queue_not_empty, &queue_mutex);
-    }
-
-    if (q->rear == NULL || q->front == NULL) {
-        fprintf(stderr, "%s\n", "ERROR rear/front element in queue is NULL");
-        return NULL;
     }
 
     /* Get the element from the queue */

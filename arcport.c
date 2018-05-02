@@ -51,7 +51,7 @@ int serve_landing(struct plane *pln) {
     /* Simulate the landing time using sleep() with the duration in the plane structure */
     sleep((unsigned int) pln->time_action);
     printf("[CONTROL] Plane %d landed in %d seconds\n", pln->id_number, pln->time_action);
-    
+
     /* Increase the counter of planes landed to track them in order to print later a file with the info */
     served_landings++;
 
@@ -85,6 +85,11 @@ void track_manager(void) {
         pthread_mutex_lock(&main_mutex);
 
         struct plane *pln = (struct plane *) malloc(sizeof(struct plane));
+        if (pln == NULL) {
+          fprintf(stderr, "%s\n", "ERROR while allocating memory in track_manager");
+          int error = -1;
+          pthread_exit(&error);
+        }
         pln->id_number = next_id;
         pln->time_action = time_takeoff;
         pln->action = OP_TAKEOFF;
@@ -119,6 +124,11 @@ void radar(void) {
         pthread_mutex_lock(&main_mutex);
 
         struct plane *pln = (struct plane *) malloc(sizeof(struct plane));
+        if (pln == NULL) {
+          fprintf(stderr, "%s\n", "ERROR while allocating memory in track_manager");
+          int error = -1;
+          pthread_exit(&error);
+        }
         pln->id_number = next_id;
         pln->time_action = time_landing;
         pln->action = OP_LAND;
@@ -155,8 +165,9 @@ void tower(void) {
         pln = queue_get();
 
         if (pln == NULL) {
-            fprintf(stderr, "ERROR something went really wrong\n");
-            pthread_exit(0);
+            fprintf(stderr, "ERROR in tower while getting element from queue\n");
+            int error = -1;
+            pthread_exit(&error);
         }
 
         /* Depending on where is the plane (air or land) takeoff or land it */
@@ -221,7 +232,9 @@ int main(int argc, char **argv) {
     }
 
     /* Initialize the circular queue */
-    queue_init(size);
+    if (queue_init(size)) != 0) {
+        return -1;
+    }
 
     /* Create an array of threads to save the thread id and create three of them with a function to execute */
     pthread_t tid[3];
@@ -256,14 +269,18 @@ int main(int argc, char **argv) {
     print_end();
 
     /* Destroy the queue and the mutex */
-    queue_destroy();
+    if (queue_destroy() != 0) {
+        return -1;
+    }
 
     if (pthread_mutex_destroy(&main_mutex) != 0) {
         fprintf(stderr, "%s\n", "ERROR when destroying the main mutex");
         return -1;
     }
 
-    create_output_file();
+    if (create_output_file() != 0) {
+        return -1;
+    }
 
     return 0;
 }

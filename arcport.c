@@ -232,7 +232,7 @@ int main(int argc, char **argv) {
     }
 
     /* Initialize the circular queue */
-    if (queue_init(size)) != 0) {
+    if (queue_init(size) != 0) {
         return -1;
     }
 

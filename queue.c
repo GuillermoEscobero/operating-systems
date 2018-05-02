@@ -21,7 +21,7 @@ Queue *q;
 int queue_init(int size) {
     /* Check that the size of the queue is not 0 */
     if (size == 0) {
-        fprintf(stderr, "%s\n\n", "ERROR: The size cannot be 0");
+        fprintf(stderr, "%s\n\n", "ERROR the size cannot be 0");
         return -1;
     }
 

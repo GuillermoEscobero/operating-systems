@@ -51,6 +51,7 @@ int serve_landing(struct plane *pln) {
     /* Simulate the landing time using sleep() with the duration in the plane structure */
     sleep((unsigned int) pln->time_action);
     printf("[CONTROL] Plane %d landed in %d seconds\n", pln->id_number, pln->time_action);
+    
     /* Increase the counter of planes landed to track them in order to print later a file with the info */
     served_landings++;
 
@@ -68,6 +69,7 @@ int serve_takeoff(struct plane *pln) {
     /* Simulate the takeoff time using sleep() with the duration in the plane structure */
     sleep((unsigned int) pln->time_action);
     printf("[CONTROL] Plane %d took off after %d seconds\n", pln->id_number, pln->time_action);
+
     /* Increase the counter of planes that took off to track them in order to print later a file with the info */
     served_takeoffs++;
 
@@ -141,7 +143,6 @@ void radar(void) {
     pthread_exit(0);
 }
 
-
 void tower(void) {
     /* Initialize the flag to 0 */
     int last_flight = 0;
@@ -172,8 +173,31 @@ void tower(void) {
     }
 
     printf("Airport closed!\n");
-    printf("SERVED FLIGHTS: %d\n", served_landings + served_takeoffs);
     pthread_exit(0);
+}
+
+int create_output_file(void) {
+    /* Create a file if it does not exists or open it if it does */
+    FILE *file_pointer = fopen("resume.air", "w+");
+
+    /* Print an error if there was any problem */
+    if (file_pointer == NULL) {
+        fprintf(stderr, "%s\n", "ERROR something happened while opening/creating the file");
+        return -1;
+    }
+
+    /* Print the requested message into the file */
+    fprintf(file_pointer, "\t%s %d\n", "Total number of planes processed:", served_landings + served_takeoffs);
+    fprintf(file_pointer, "\t%s %d\n", "Number of planes landed:", served_landings);
+    fprintf(file_pointer, "\t%s %d\n", "Number of planes taken off:", served_takeoffs);
+
+    /* Close the file */
+    if (fclose(file_pointer) != 0){
+        fprintf(stderr, "%s\n", "ERROR while closing the file");
+        return -1;
+    }
+
+    return 0;
 }
 
 int main(int argc, char **argv) {
@@ -201,20 +225,45 @@ int main(int argc, char **argv) {
 
     /* Create an array of threads to save the thread id and create three of them with a function to execute */
     pthread_t tid[3];
-    pthread_create(&tid[0], NULL, (void *) track_manager, (void *) &planes_takeoff);
-    pthread_create(&tid[1], NULL, (void *) radar, (void *) &planes_land);
-    pthread_create(&tid[2], NULL, (void *) tower, NULL);
+
+    if (pthread_create(&tid[0], NULL, (void *) track_manager, (void *) &planes_takeoff) != 0) {
+        fprintf(stderr, "%s\n", "ERROR the first thread couldn't be created, check errno macro for more details");
+        return -1;
+    }
+    if (pthread_create(&tid[1], NULL, (void *) radar, (void *) &planes_land) != 0) {
+        fprintf(stderr, "%s\n", "ERROR the second thread couldn't be created, check errno macro for more details");
+        return -1;
+    }
+    if (pthread_create(&tid[2], NULL, (void *) tower, NULL) != 0) {
+        fprintf(stderr, "%s\n", "ERROR the last thread couldn't be created, check errno macro for more details");
+        return -1;
+    }
 
     /* Join the threads after they exit */
-    pthread_join(tid[0], NULL);
-    pthread_join(tid[1], NULL);
-    pthread_join(tid[2], NULL);
+    if (pthread_join(tid[0], NULL) != 0) {
+        fprintf(stderr, "%s\n", "ERROR while waiting for the first thread");
+        return -1;
+    }
+    if (pthread_join(tid[1], NULL) != 0) {
+        fprintf(stderr, "%s\n", "ERROR while waiting for the second thread");
+        return -1;
+    }
+    if (pthread_join(tid[2], NULL) != 0) {
+        fprintf(stderr, "%s\n", "ERROR while waiting for the last thread");
+        return -1;
+    }
 
     print_end();
 
     /* Destroy the queue and the mutex */
     queue_destroy();
-    pthread_mutex_destroy(&main_mutex);
+
+    if (pthread_mutex_destroy(&main_mutex) != 0) {
+        fprintf(stderr, "%s\n", "ERROR when destroying the main mutex");
+        return -1;
+    }
+
+    create_output_file();
 
     return 0;
 }
